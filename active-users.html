@@ -173,35 +173,6 @@
             box-shadow: 0 4px 12px rgba(88, 166, 255, 0.15);
         }
 
-        .score-badge {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background: #ffa657;
-            color: #0d1117;
-            padding: 6px 10px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            font-family: inherit;
-            box-shadow: 0 2px 8px rgba(255, 166, 87, 0.3);
-            min-width: 60px;
-            text-align: center;
-        }
-
-        .score-badge.high {
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-        }
-
-        .score-badge.medium {
-            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-        }
-
-        .score-badge.low {
-            background: #58a6ff;
-            color: #0d1117;
-        }
-
         .user-avatar {
             width: 50px;
             height: 50px;
@@ -254,6 +225,13 @@
             padding: 4px;
             background: #30363d;
             border-radius: 4px;
+            border: 1px solid transparent;
+            transition: border-color 0.2s ease;
+        }
+
+        .metric-item.sorted {
+            border-color: #e74c3c;
+            box-shadow: 0 0 0 1px #e74c3c;
         }
 
         .metric-value {
@@ -346,12 +324,6 @@
 
             .user-login {
                 font-size: 0.85rem;
-            }
-
-            .score-badge {
-                font-size: 0.8rem;
-                padding: 6px 10px;
-                min-width: 50px;
             }
 
             .stats-bar {
@@ -559,23 +531,15 @@
             return Math.round(totalScore);
         }
 
-        // Score'a göre badge sınıfı belirleme
-        function getScoreBadgeClass(score) {
-            if (score >= 80) return 'high';
-            if (score >= 50) return 'medium';
-            return 'low';
-        }
-
         // Kullanıcı kartı oluşturma
         function createUserCard(user) {
             const displayName = getUserDisplayName(user.user_login);
             const fullName = getUserFullName(user.user_login);
             const score = calculateAIScore(user);
-            const scoreClass = getScoreBadgeClass(score);
+            const sortBy = document.getElementById('sortSelect').value;
             
             return `
                 <div class="user-card">
-                    <div class="score-badge ${scoreClass}">${score}</div>
                     <div class="user-avatar">
                         ${displayName.charAt(0).toUpperCase()}
                     </div>
@@ -583,15 +547,19 @@
                         <div class="user-name">${displayName}</div>
                         <div class="user-login">@${user.user_login}</div>
                         <div class="user-metrics">
-                            <div class="metric-item">
+                            <div class="metric-item ${sortBy === 'score' ? 'sorted' : ''}">
+                                <div class="metric-value">${score}</div>
+                                <div class="metric-label">AI Score</div>
+                            </div>
+                            <div class="metric-item ${sortBy === 'interactions' ? 'sorted' : ''}">
                                 <div class="metric-value">${user.user_initiated_interaction_count || 0}</div>
                                 <div class="metric-label">Interactions</div>
                             </div>
-                            <div class="metric-item">
+                            <div class="metric-item ${sortBy === 'generations' ? 'sorted' : ''}">
                                 <div class="metric-value">${user.code_generation_activity_count || 0}</div>
                                 <div class="metric-label">Code Generation</div>
                             </div>
-                            <div class="metric-item">
+                            <div class="metric-item ${sortBy === 'acceptances' ? 'sorted' : ''}">
                                 <div class="metric-value">${user.code_acceptance_activity_count || 0}</div>
                                 <div class="metric-label">Accepted</div>
                             </div>
