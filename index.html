@@ -1,0 +1,2243 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Copilot Usage Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', 'Consolas', 'Monaco', monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            margin: 0;
+            padding: 15px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: #161b22;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .header {
+            background: #21262d;
+            color: #f0f6fc;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            font-weight: 500;
+            letter-spacing: -0.025em;
+        }
+
+        .header p {
+            font-size: 1rem;
+            opacity: 0.7;
+            font-weight: 300;
+        }
+
+        .filter-status {
+            background: #21262d;
+            padding: 12px 20px;
+            margin: 0;
+            border-radius: 0;
+            border-bottom: 1px solid #30363d;
+            min-height: 20px;
+            display: none;
+        }
+
+        .filter-status.active {
+            display: block;
+        }
+
+        .filter-status h4 {
+            margin: 0 0 8px 0;
+            color: #f0f6fc;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .filter-tag {
+            display: inline-block;
+            background: #58a6ff;
+            color: #0d1117;
+            padding: 4px 8px;
+            margin: 2px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .clear-filters-btn {
+            background: #f85149;
+            color: #fff;
+            border: none;
+            padding: 4px 8px;
+            margin-left: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-family: inherit;
+            transition: background 0.2s;
+        }
+
+        .clear-filters-btn:hover {
+            background: #da3633;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            background: #161b22;
+        }
+
+        .stat-card {
+            background: #21262d;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            text-align: center;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: #58a6ff;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #f0f6fc;
+            margin-bottom: 8px;
+            font-family: inherit;
+        }
+
+        .stat-label {
+            color: #8b949e;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .charts-section {
+            padding: 20px;
+            background: #161b22;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .charts-grid.large {
+            grid-template-columns: 1fr;
+        }
+
+        .chart-container {
+            background: #21262d;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .chart-title {
+            font-size: 1.1rem;
+            color: #f0f6fc;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 500;
+            font-family: inherit;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chart-expand-btn {
+            background: #30363d;
+            border: 1px solid #58a6ff;
+            color: #58a6ff;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .chart-expand-btn:hover {
+            background: #58a6ff;
+            color: #0d1117;
+        }
+
+        .chart-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .chart-modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-modal-content {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 95vw;
+            max-height: 95vh;
+            width: 1200px;
+            position: relative;
+        }
+
+        .chart-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-modal-title {
+            font-size: 1.5rem;
+            color: #f0f6fc;
+            font-family: inherit;
+            font-weight: 500;
+        }
+
+        .chart-modal-close {
+            background: #f85149;
+            border: none;
+            color: #fff;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-family: inherit;
+            font-weight: 500;
+            transition: background 0.2s ease;
+        }
+
+        .chart-modal-close:hover {
+            background: #da3633;
+        }
+
+        .chart-modal-wrapper {
+            width: 100%;
+            height: 70vh;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-modal-wrapper canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 280px;
+            flex: 1;
+        }
+
+        .chart-wrapper.small {
+            height: 220px;
+        }
+
+        .chart-wrapper.large {
+            height: 350px;
+        }
+
+        .filters {
+            padding: 20px 30px;
+            background: #21262d;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            color: #f0f6fc;
+            font-weight: 500;
+            font-family: inherit;
+        }
+
+        .filter-group select, .filter-group input {
+            padding: 8px 12px;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: inherit;
+            transition: border-color 0.2s ease;
+        }
+
+        .filter-group select:focus, .filter-group input:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.1);
+        }
+
+        .raw-data-section {
+            padding: 30px;
+            background: #161b22;
+        }
+
+        .raw-data-container {
+            background: #21262d;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #30363d;
+        }
+
+        .raw-data-header {
+            background: #30363d;
+            color: #f0f6fc;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .raw-data-content {
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #0d1117;
+        }
+
+        .json-viewer {
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 20px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border: 1px solid #21262d;
+        }
+
+        .btn {
+            background: #238636;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-family: inherit;
+            font-weight: 500;
+            transition: background 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #2ea043;
+        }
+
+        .navigation {
+            background: #21262d;
+            padding: 10px 20px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: #c9d1d9;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .nav-links a:hover, .nav-links a.active {
+            background: #30363d;
+            color: #f0f6fc;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                padding: 20px;
+            }
+
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            @media (min-width: 768px) and (max-width: 1200px) {
+                .charts-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+
+            .chart-wrapper {
+                height: 250px;
+            }
+
+            .chart-wrapper.small {
+                height: 200px;
+            }
+
+            .chart-wrapper.large {
+                height: 280px;
+            }
+
+            .charts-section {
+                padding: 15px;
+            }
+
+            .nav-links {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🤖 GitHub Copilot Usage Analytics</h1>
+            <p>Detailed usage metrics and analysis reports</p>
+            <div class="filter-status" id="filterStatus">
+                <strong>🔍 Active Filters:</strong>
+                <div id="activeFilters"></div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="navigation">
+            <ul class="nav-links">
+                <li><a href="#overview" class="nav-link active" onclick="showSection('overview')">📊 Overview</a></li>
+                <li><a href="#charts" class="nav-link" onclick="showSection('charts')">📈 Charts</a></li>
+                <li><a href="#raw-data" class="nav-link" onclick="showSection('raw-data')">📋 Raw Data</a></li>
+                <li><a href="active-users.html" class="nav-link">🚀 Active Users</a></li>
+                <li><a href="inactive-users.html" class="nav-link">🚫 Inactive Users</a></li>
+                <li><a href="raw-data-viewer.html" class="nav-link">🗂️ Advanced Data Viewer</a></li>
+                <li><a href="data-manager.html" class="nav-link">📁 Data Manager</a></li>
+            </ul>
+        </nav>
+
+        <!-- Overview Section -->
+        <div id="overview" class="section active">
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Date Range:</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="filter-group">
+                    <label>End Date:</label>
+                    <input type="date" id="endDate">
+                </div>
+                <div class="filter-group">
+                    <label>User:</label>
+                    <select id="userFilter">
+                        <option value="">All Users</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>IDE:</label>
+                    <select id="ideFilter">
+                        <option value="">All IDEs</option>
+                    </select>
+                </div>
+                <button class="btn" onclick="applyFilters()">Apply Filters</button>
+                <button class="btn" onclick="clearAllFilters()" style="background: #f85149;">Clear All</button>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid" id="statsGrid">
+                <!-- Stats will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div id="charts" class="section">
+            <div class="charts-section">
+                <!-- Primary Charts Grid (2x2) -->
+                <div class="charts-grid">
+                    <!-- Daily Usage Trend -->
+                    <div class="chart-container">
+                        <h3 class="chart-title">
+                            📈 Daily Usage Trend
+                            <button class="chart-expand-btn" onclick="expandChart('dailyUsageChart', '📈 Daily Usage Trend')">⛶</button>
+                        </h3>
+                        <div class="chart-wrapper">
+                            <canvas id="dailyUsageChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- User Activity -->
+                    <div class="chart-container">
+                        <h3 class="chart-title">
+                            👥 User Activity
+                            <button class="chart-expand-btn" onclick="expandChart('userActivityChart', '👥 User Activity')">⛶</button>
+                        </h3>
+                        <div class="chart-wrapper">
+                            <canvas id="userActivityChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- IDE Distribution -->
+                    <div class="chart-container">
+                        <h3 class="chart-title">
+                            💻 IDE Distribution
+                            <button class="chart-expand-btn" onclick="expandChart('ideDistributionChart', '💻 IDE Distribution')">⛶</button>
+                        </h3>
+                        <div class="chart-wrapper small">
+                            <canvas id="ideDistributionChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Feature Usage -->
+                    <div class="chart-container">
+                        <h3 class="chart-title">
+                            🔧 Feature Usage
+                            <button class="chart-expand-btn" onclick="expandChart('featureUsageChart', '🔧 Feature Usage')">⛶</button>
+                        </h3>
+                        <div class="chart-wrapper small">
+                            <canvas id="featureUsageChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Language Usage -->
+                    <div class="chart-container">
+                        <h3 class="chart-title">
+                            💻 Programming Language Usage
+                            <button class="chart-expand-btn" onclick="expandChart('languageUsageChart', '💻 Programming Language Usage')">⛶</button>
+                        </h3>
+                        <div class="chart-wrapper">
+                            <canvas id="languageUsageChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Model Usage -->
+                    <div class="chart-container">
+                        <h3 class="chart-title">
+                            🤖 Model Usage
+                            <button class="chart-expand-btn" onclick="expandChart('modelUsageChart', '🤖 Model Usage')">⛶</button>
+                        </h3>
+                        <div class="chart-wrapper">
+                            <canvas id="modelUsageChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- License Charts Section -->
+                <div class="charts-grid">
+                    <!-- License Distribution -->
+                    <div class="chart-container">
+                        <h3 class="chart-title">
+                            📜 License Distribution
+                            <button class="chart-expand-btn" onclick="expandChart('licenseDistributionChart', '📜 License Distribution')">⛶</button>
+                        </h3>
+                        <div class="chart-wrapper small">
+                            <canvas id="licenseDistributionChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Activity by License Type -->
+                    <div class="chart-container">
+                        <h3 class="chart-title">
+                            📊 Activity by License Type
+                            <button class="chart-expand-btn" onclick="expandChart('licenseActivityChart', '📊 Activity by License Type')">⛶</button>
+                        </h3>
+                        <div class="chart-wrapper">
+                            <canvas id="licenseActivityChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- License Usage Trend -->
+                    <div class="chart-container">
+                        <h3 class="chart-title">
+                            📈 License Usage Trend
+                            <button class="chart-expand-btn" onclick="expandChart('licenseUsageTrendChart', '📈 License Usage Trend')">⛶</button>
+                        </h3>
+                        <div class="chart-wrapper">
+                            <canvas id="licenseUsageTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Activity Status Charts Section -->
+                <div class="charts-grid">
+                    <!-- Active vs Inactive Users -->
+                    <div class="chart-container">
+                        <h3 class="chart-title">
+                            👥 Active vs Inactive Users
+                            <button class="chart-expand-btn" onclick="expandChart('activeInactiveChart', '👥 Active vs Inactive Users')">⛶</button>
+                        </h3>
+                        <div class="chart-wrapper small">
+                            <canvas id="activeInactiveChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Inactive Users License Breakdown -->
+                    <div class="chart-container">
+                        <h3 class="chart-title">
+                            📊 Inactive Users License Breakdown
+                            <button class="chart-expand-btn" onclick="expandChart('inactiveUsersLicenseChart', '📊 Inactive Users License Breakdown')">⛶</button>
+                        </h3>
+                        <div class="chart-wrapper">
+                            <canvas id="inactiveUsersLicenseChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- User Activity by License Type -->
+                    <div class="chart-container">
+                        <h3 class="chart-title">
+                            📈 User Activity by License Type
+                            <button class="chart-expand-btn" onclick="expandChart('userActivityByLicenseChart', '📈 User Activity by License Type')">⛶</button>
+                        </h3>
+                        <div class="chart-wrapper">
+                            <canvas id="userActivityByLicenseChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Raw Data Section -->
+        <div id="raw-data" class="section">
+            <div class="raw-data-section">
+                <div class="raw-data-container">
+                    <div class="raw-data-header">
+                        <h3>📋 Raw JSON Data</h3>
+                        <button class="btn" onclick="downloadData()">📥 Download</button>
+                    </div>
+                    <div class="raw-data-content">
+                        <div class="json-viewer" id="jsonViewer">
+                            <!-- Raw JSON data will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let rawData = [];
+        let filteredData = [];
+        let charts = {};
+
+        // Kullanıcı ID'leri ve gerçek isimleri eşleme tablosu (CSV'den dinamik olarak yüklenecek)
+        const userNameMapping = {};
+
+        // Kullanıcı lisans eşleme tablosu
+        const userLicenseMapping = {};
+
+        // Kullanıcı ismini al (ID varsa gerçek ismi, yoksa ID'yi döndür)
+        function getUserDisplayName(userLogin) {
+            const realName = userNameMapping[userLogin];
+            return realName ? `${userLogin} - ${realName}` : userLogin;
+        }
+
+        // Kullanıcı lisansını al
+        function getUserLicense(userLogin) {
+            const license = userLicenseMapping[userLogin] || '';
+            if (!license || license.trim() === '') {
+                return 'Not Specified';
+            }
+            return license;
+        }
+
+        // Kullanıcının aktif/inaktif durumunu belirle (usage data'ya göre)
+        function getUserActivityStatus(userLogin) {
+            // Admin kullanıcıyı hariç tut
+            if (userLogin === 'admin_user') {
+                return 'Admin';
+            }
+            
+            // JSON usage data'sında bu kullanıcının activity'si var mı kontrol et
+            const hasActivity = filteredData.some(d => d.user_login === userLogin);
+            return hasActivity ? 'Active' : 'Inactive';
+        }
+
+        // Tüm kayıtlı kullanıcıları al (CSV'den)
+        function getAllRegisteredUsers() {
+            return Object.keys(userLicenseMapping).filter(user => user !== 'admin_user');
+        }
+
+        // Aktif kullanıcıları al (usage data'sı olan)
+        function getActiveUsers() {
+            const activeUserLogins = new Set(filteredData.map(d => d.user_login));
+            return [...activeUserLogins].filter(user => user !== 'admin_user');
+        }
+
+        // İnaktif kullanıcıları al (CSV'de var ama usage data'sı yok)
+        function getInactiveUsers() {
+            const allRegistered = getAllRegisteredUsers();
+            const activeUserLogins = new Set(getActiveUsers());
+            return allRegistered.filter(user => !activeUserLogins.has(user));
+        }
+
+        // Kullanıcının lisans durumunu kategorize et
+        function getUserLicenseCategory(userLogin) {
+            // Raw license value'yu al
+            const rawLicense = userLicenseMapping[userLogin];
+            
+            // Undefined, null, empty string durumları
+            if (rawLicense === undefined || rawLicense === null || rawLicense === '') {
+                return 'Not Specified';
+            }
+            
+            // String ise trim et
+            const license = rawLicense.toString().trim();
+            
+            if (license === '' || license === 'undefined' || license === 'null') {
+                return 'Not Specified';
+            } else if (license === 'Enterprise') {
+                return 'Enterprise';
+            } else {
+                return 'Other';
+            }
+        }
+
+        // Load and parse data
+        async function loadData() {
+            try {
+                // Check for selected data files in localStorage
+                const selectedUsageData = localStorage.getItem('selectedUsageData');
+                const selectedUserData = localStorage.getItem('selectedUserData');
+                
+                // Use selected files or fallback to defaults
+                const usageDataPath = selectedUsageData || 'data/usage/7d239eb2-952c-4b35-a593-15a380bd4480_1_2a5f476ee7394f47ad7dea0e9fa8b255.json';
+                const userDataPath = selectedUserData || 'data/users/export-sample-users.csv';
+                
+                const response = await fetch(usageDataPath);
+                if (!response.ok) {
+                    throw new Error(`Failed to load usage data: ${response.status}`);
+                }
+                const text = await response.text();
+                
+                // Parse JSONL (JSON Lines) format
+                rawData = text.trim().split('\n').map(line => {
+                    try {
+                        return JSON.parse(line);
+                    } catch (e) {
+                        console.error('Error parsing line:', line);
+                        return null;
+                    }
+                }).filter(item => item !== null);
+
+                // Load user data for name mapping
+                try {
+                    const userResponse = await fetch(userDataPath);
+                    if (userResponse.ok) {
+                        await loadUserMapping(userResponse);
+                    }
+                } catch (error) {
+                    console.warn('Could not load user mapping:', error);
+                }
+
+                filteredData = [...rawData];
+                
+                // Initialize filters
+                populateFilters();
+                
+                // Initialize dashboard
+                updateStats();
+                createCharts();
+                displayRawData();
+                
+                console.log(`Loaded ${rawData.length} records from ${usageDataPath}`);
+                
+                // Show data source info if custom files are selected
+                if (selectedUsageData || selectedUserData) {
+                    showDataSourceInfo(usageDataPath, userDataPath);
+                }
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('overview').innerHTML = `
+                    <div style="text-align: center; padding: 50px; background: #f8f9fa; border-radius: 10px;">
+                        <h3 style="color: #dc3545;">❌ Error Loading Data</h3>
+                        <p style="margin: 20px 0;">Could not load the data files. Please check:</p>
+                        <ul style="text-align: left; display: inline-block; color: #6c757d;">
+                            <li>Data files are in the correct directories</li>
+                            <li>Server is running properly</li>
+                            <li>File paths are correct</li>
+                        </ul>
+                        <p style="margin-top: 30px;">
+                            <a href="data-manager.html" style="background: #007acc; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; display: inline-block;">
+                                📁 Go to Data Manager
+                            </a>
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        // Show data source information
+        function showDataSourceInfo(usageDataPath, userDataPath) {
+            const info = document.createElement('div');
+            info.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(0, 123, 255, 0.9);
+                color: white;
+                padding: 15px;
+                border-radius: 8px;
+                font-size: 0.9rem;
+                z-index: 1000;
+                max-width: 300px;
+            `;
+            info.innerHTML = `
+                <strong>📊 Data Source:</strong><br>
+                Usage: ${usageDataPath.split('/').pop()}<br>
+                Users: ${userDataPath.split('/').pop()}
+            `;
+            document.body.appendChild(info);
+            
+            setTimeout(() => {
+                info.remove();
+            }, 5000);
+        }
+
+        // Load user mapping from CSV
+        async function loadUserMapping(response) {
+            try {
+                const csvText = await response.text();
+                const lines = csvText.trim().split('\n');
+                
+                if (lines.length > 1) {
+                    const headers = lines[0].split(',');
+                    const loginIndex = headers.findIndex(h => h.includes('login'));
+                    const nameIndex = headers.findIndex(h => h.includes('name'));
+                    const licenseIndex = headers.findIndex(h => h.includes('License type'));
+                    
+                    console.log('CSV Headers:', headers);
+                    console.log('Indices - Login:', loginIndex, 'Name:', nameIndex, 'License:', licenseIndex);
+                    
+                    if (loginIndex >= 0) {
+                        // Clear existing mappings
+                        Object.keys(userNameMapping).forEach(key => delete userNameMapping[key]);
+                        Object.keys(userLicenseMapping).forEach(key => delete userLicenseMapping[key]);
+                        
+                        lines.slice(1).forEach((line, rowIndex) => {
+                            const values = parseCSVLine(line);
+                            if (values[loginIndex]) {
+                                const login = values[loginIndex].replace(/"/g, '');
+                                
+                                // Load name mapping if name column exists
+                                if (nameIndex >= 0 && values[nameIndex]) {
+                                    const name = values[nameIndex].replace(/"/g, '');
+                                    if (name && name !== login) {
+                                        userNameMapping[login] = name;
+                                    }
+                                }
+                                
+                                // Load license information - improved handling
+                                if (licenseIndex >= 0) {
+                                    let license = '';
+                                    if (values[licenseIndex]) {
+                                        license = values[licenseIndex].replace(/"/g, '').trim();
+                                    }
+                                    
+                                    // Store license even if empty - this is important for inactive user detection
+                                    userLicenseMapping[login] = license;
+                                    
+                                    // Debug first few entries
+                                    if (rowIndex < 5) {
+                                        console.log(`Row ${rowIndex}: Login="${login}", Name="${userNameMapping[login] || 'NOT_SET'}", License="${license}", Raw="${values[licenseIndex]}"`);
+                                    }
+                                }
+                            }
+                        });
+                        console.log(`Loaded ${Object.keys(userNameMapping).length} user name mappings from CSV`);
+                        console.log(`Loaded ${Object.keys(userLicenseMapping).length} user license mappings from CSV`);
+                        
+                        // Debug license distribution
+                        const licenseStats = Object.values(userLicenseMapping).reduce((acc, license) => {
+                            const key = license || 'EMPTY';
+                            acc[key] = (acc[key] || 0) + 1;
+                            return acc;
+                        }, {});
+                        console.log('License distribution in CSV:', licenseStats);
+                        
+                        // Debug name mapping sample
+                        const nameStats = Object.keys(userNameMapping).slice(0, 5);
+                        console.log('Sample name mappings:', nameStats.map(login => `${login} -> ${userNameMapping[login]}`));
+                    }
+                }
+            } catch (error) {
+                console.warn('Error loading user mapping:', error);
+            }
+        }
+
+        // Parse CSV line handling quotes
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            result.push(current);
+            return result;
+        }
+
+        // Populate filter options
+        function populateFilters() {
+            const users = [...new Set(rawData.map(d => d.user_login))].sort();
+            const ides = [...new Set(rawData.flatMap(d => d.totals_by_ide?.map(ide => ide.ide) || []))].sort();
+
+            const userSelect = document.getElementById('userFilter');
+            const ideSelect = document.getElementById('ideFilter');
+
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user;
+                option.textContent = getUserDisplayName(user);
+                userSelect.appendChild(option);
+            });
+
+            ides.forEach(ide => {
+                const option = document.createElement('option');
+                option.value = ide;
+                option.textContent = ide.toUpperCase();
+                ideSelect.appendChild(option);
+            });
+
+            // Set date range
+            const dates = rawData.map(d => d.day).sort();
+            if (dates.length > 0) {
+                document.getElementById('startDate').value = dates[0];
+                document.getElementById('endDate').value = dates[dates.length - 1];
+            }
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const userFilter = document.getElementById('userFilter').value;
+            const ideFilter = document.getElementById('ideFilter').value;
+
+            filteredData = rawData.filter(d => {
+                let valid = true;
+
+                if (startDate && d.day < startDate) valid = false;
+                if (endDate && d.day > endDate) valid = false;
+                if (userFilter && d.user_login !== userFilter) valid = false;
+                if (ideFilter && !d.totals_by_ide?.some(ide => ide.ide === ideFilter)) valid = false;
+
+                return valid;
+            });
+
+            updateFilterStatus(startDate, endDate, userFilter, ideFilter);
+            updateStats();
+            updateCharts();
+        }
+
+        // Update filter status display
+        function updateFilterStatus(startDate, endDate, userFilter, ideFilter) {
+            const filterStatus = document.getElementById('filterStatus');
+            const activeFilters = document.getElementById('activeFilters');
+            
+            let filters = [];
+            
+            if (startDate || endDate) {
+                const start = startDate || 'Start';
+                const end = endDate || 'End';
+                filters.push(`<span class="filter-tag">📅 ${start} - ${end}</span>`);
+            }
+            
+            if (userFilter) {
+                filters.push(`<span class="filter-tag">👤 ${getUserDisplayName(userFilter)}</span>`);
+            }
+            
+            if (ideFilter) {
+                filters.push(`<span class="filter-tag">💻 ${ideFilter.toUpperCase()}</span>`);
+            }
+            
+            if (filters.length > 0) {
+                activeFilters.innerHTML = filters.join('') + 
+                    '<button class="clear-filters-btn" onclick="clearAllFilters()">✖ Clear</button>';
+                filterStatus.classList.add('active');
+            } else {
+                filterStatus.classList.remove('active');
+            }
+        }
+
+        // Clear all filters
+        function clearAllFilters() {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            document.getElementById('userFilter').value = '';
+            document.getElementById('ideFilter').value = '';
+            
+            // Reset date range to full range
+            const dates = rawData.map(d => d.day).sort();
+            if (dates.length > 0) {
+                document.getElementById('startDate').value = dates[0];
+                document.getElementById('endDate').value = dates[dates.length - 1];
+            }
+            
+            filteredData = [...rawData];
+            updateFilterStatus('', '', '', '');
+            updateStats();
+            updateCharts();
+        }
+
+        // Update statistics
+        function updateStats() {
+            const stats = calculateStats();
+            const statsGrid = document.getElementById('statsGrid');
+            
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${stats.totalUsers}</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.totalInteractions.toLocaleString()}</div>
+                    <div class="stat-label">User Interactions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.totalGenerations.toLocaleString()}</div>
+                    <div class="stat-label">Code Generations</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.totalAcceptances.toLocaleString()}</div>
+                    <div class="stat-label">Code Acceptances</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.avgAcceptanceRate}%</div>
+                    <div class="stat-label">Acceptance Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.totalLinesAdded.toLocaleString()}</div>
+                    <div class="stat-label">Lines Added</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.totalLinesDeleted.toLocaleString()}</div>
+                    <div class="stat-label">Lines Deleted</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.agentUsage}%</div>
+                    <div class="stat-label">Agent Usage</div>
+                </div>
+            `;
+        }
+
+        // Calculate statistics
+        function calculateStats() {
+            const totalUsers = new Set(filteredData.map(d => d.user_login)).size;
+            const totalInteractions = filteredData.reduce((sum, d) => sum + d.user_initiated_interaction_count, 0);
+            const totalGenerations = filteredData.reduce((sum, d) => sum + d.code_generation_activity_count, 0);
+            const totalAcceptances = filteredData.reduce((sum, d) => sum + d.code_acceptance_activity_count, 0);
+            const totalLinesAdded = filteredData.reduce((sum, d) => sum + d.loc_added_sum, 0);
+            const totalLinesDeleted = filteredData.reduce((sum, d) => sum + d.loc_deleted_sum, 0);
+            const agentUsers = filteredData.filter(d => d.used_agent).length;
+            
+            const avgAcceptanceRate = totalGenerations > 0 ? Math.round((totalAcceptances / totalGenerations) * 100) : 0;
+            const agentUsage = filteredData.length > 0 ? Math.round((agentUsers / filteredData.length) * 100) : 0;
+
+            return {
+                totalUsers,
+                totalInteractions,
+                totalGenerations,
+                totalAcceptances,
+                avgAcceptanceRate,
+                totalLinesAdded,
+                totalLinesDeleted,
+                agentUsage
+            };
+        }
+
+        // Create charts
+        function createCharts() {
+            createDailyUsageChart();
+            createUserActivityChart();
+            createIdeDistributionChart();
+            createFeatureUsageChart();
+            createLanguageUsageChart();
+            createModelUsageChart();
+            createLicenseDistributionChart();
+            createLicenseActivityChart();
+            createLicenseUsageTrendChart();
+            createActiveInactiveChart();
+            createInactiveUsersLicenseChart();
+            createUserActivityByLicenseChart();
+        }
+
+        // Update charts
+        function updateCharts() {
+            Object.values(charts).forEach(chart => {
+                chart.destroy();
+            });
+            charts = {};
+            createCharts();
+        }
+
+        // Chart.js default settings for compact view and dark theme
+        Chart.defaults.font.size = 11;
+        Chart.defaults.font.family = "'JetBrains Mono', 'Fira Code', 'Source Code Pro', 'Consolas', 'Monaco', monospace";
+        Chart.defaults.color = '#c9d1d9';
+        Chart.defaults.borderColor = '#30363d';
+        Chart.defaults.backgroundColor = 'rgba(200, 200, 200, 0.1)';
+        Chart.defaults.plugins.legend.labels.padding = 8;
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
+        Chart.defaults.plugins.legend.labels.font = { size: 10 };
+        Chart.defaults.plugins.legend.labels.color = '#c9d1d9';
+        Chart.defaults.layout.padding = 5;
+        Chart.defaults.elements.point.radius = 3;
+        Chart.defaults.elements.point.hoverRadius = 5;
+
+        // Daily usage trend chart
+        function createDailyUsageChart() {
+            const dailyData = filteredData.reduce((acc, d) => {
+                const date = d.day;
+                if (!acc[date]) {
+                    acc[date] = {
+                        interactions: 0,
+                        generations: 0,
+                        acceptances: 0
+                    };
+                }
+                acc[date].interactions += d.user_initiated_interaction_count;
+                acc[date].generations += d.code_generation_activity_count;
+                acc[date].acceptances += d.code_acceptance_activity_count;
+                return acc;
+            }, {});
+
+            const dates = Object.keys(dailyData).sort();
+            const interactions = dates.map(date => dailyData[date].interactions);
+            const generations = dates.map(date => dailyData[date].generations);
+            const acceptances = dates.map(date => dailyData[date].acceptances);
+
+            const ctx = document.getElementById('dailyUsageChart').getContext('2d');
+            charts.dailyUsage = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'User Interactions',
+                            data: interactions,
+                            borderColor: '#58a6ff',
+                            backgroundColor: 'rgba(88, 166, 255, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Code Generation',
+                            data: generations,
+                            borderColor: '#f85149',
+                            backgroundColor: 'rgba(248, 81, 73, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Code Acceptance',
+                            data: acceptances,
+                            borderColor: '#238636',
+                            backgroundColor: 'rgba(35, 134, 54, 0.1)',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                padding: 8,
+                                font: { size: 11 },
+                                usePointStyle: true
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Tarih',
+                                font: { size: 10 },
+                                color: '#8b949e'
+                            },
+                            ticks: {
+                                font: { size: 9 },
+                                maxTicksLimit: 8,
+                                color: '#8b949e'
+                            },
+                            grid: {
+                                color: '#21262d'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Activity Count',
+                                font: { size: 10 },
+                                color: '#8b949e'
+                            },
+                            ticks: {
+                                font: { size: 9 },
+                                color: '#8b949e'
+                            },
+                            grid: {
+                                color: '#21262d'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // User activity chart
+        function createUserActivityChart() {
+            const userData = filteredData.reduce((acc, d) => {
+                const user = d.user_login;
+                if (!acc[user]) {
+                    acc[user] = {
+                        interactions: 0,
+                        generations: 0,
+                        acceptances: 0
+                    };
+                }
+                acc[user].interactions += d.user_initiated_interaction_count;
+                acc[user].generations += d.code_generation_activity_count;
+                acc[user].acceptances += d.code_acceptance_activity_count;
+                return acc;
+            }, {});
+
+            // Kullanıcıları toplam aktivite sayısına göre azalan sırada sırala
+            const users = Object.keys(userData).sort((a, b) => {
+                const totalA = userData[a].interactions + userData[a].generations;
+                const totalB = userData[b].interactions + userData[b].generations;
+                return totalB - totalA; // Azalan sıra
+            });
+            
+            const userDisplayNames = users.map(user => getUserDisplayName(user));
+            const interactions = users.map(user => userData[user].interactions);
+            const generations = users.map(user => userData[user].generations);
+
+            const ctx = document.getElementById('userActivityChart').getContext('2d');
+            charts.userActivity = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: userDisplayNames,
+                    datasets: [
+                        {
+                            label: 'User Interactions',
+                            data: interactions,
+                            backgroundColor: '#3498db'
+                        },
+                        {
+                            label: 'Code Generation',
+                            data: generations,
+                            backgroundColor: '#e74c3c'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                padding: 8,
+                                font: { size: 11 },
+                                usePointStyle: true
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Users',
+                                font: { size: 10 }
+                            },
+                            ticks: {
+                                font: { size: 9 },
+                                maxRotation: 45
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Activity Count'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // IDE distribution chart
+        function createIdeDistributionChart() {
+            const ideData = filteredData.reduce((acc, d) => {
+                d.totals_by_ide?.forEach(ide => {
+                    if (!acc[ide.ide]) {
+                        acc[ide.ide] = 0;
+                    }
+                    acc[ide.ide] += ide.code_generation_activity_count;
+                });
+                return acc;
+            }, {});
+
+            const ides = Object.keys(ideData);
+            const counts = Object.values(ideData);
+
+            const ctx = document.getElementById('ideDistributionChart').getContext('2d');
+            charts.ideDistribution = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ides.map(ide => ide.toUpperCase()),
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: [
+                            '#3498db',
+                            '#e74c3c',
+                            '#2ecc71',
+                            '#f39c12',
+                            '#9b59b6',
+                            '#1abc9c'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 6,
+                                font: { size: 10 },
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Feature usage chart
+        function createFeatureUsageChart() {
+            const featureData = filteredData.reduce((acc, d) => {
+                d.totals_by_feature?.forEach(feature => {
+                    if (!acc[feature.feature]) {
+                        acc[feature.feature] = 0;
+                    }
+                    acc[feature.feature] += feature.code_generation_activity_count;
+                });
+                return acc;
+            }, {});
+
+            const features = Object.keys(featureData);
+            const counts = Object.values(featureData);
+
+            const ctx = document.getElementById('featureUsageChart').getContext('2d');
+            charts.featureUsage = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: features,
+                    datasets: [{
+                        label: 'Code Generation',
+                        data: counts,
+                        backgroundColor: '#9b59b6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Code Generation Count'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Language usage chart
+        function createLanguageUsageChart() {
+            const languageData = filteredData.reduce((acc, d) => {
+                d.totals_by_language_feature?.forEach(lang => {
+                    if (!acc[lang.language]) {
+                        acc[lang.language] = 0;
+                    }
+                    acc[lang.language] += lang.code_generation_activity_count;
+                });
+                return acc;
+            }, {});
+
+            // Get top 10 languages
+            const sortedLanguages = Object.entries(languageData)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 10);
+
+            const languages = sortedLanguages.map(([lang]) => lang);
+            const counts = sortedLanguages.map(([,count]) => count);
+
+            const ctx = document.getElementById('languageUsageChart').getContext('2d');
+            charts.languageUsage = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: languages,
+                    datasets: [{
+                        label: 'Code Generation',
+                        data: counts,
+                        backgroundColor: '#1abc9c'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Programming Languages'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Code Generation Count'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Model usage chart
+        function createModelUsageChart() {
+            const modelData = filteredData.reduce((acc, d) => {
+                d.totals_by_model_feature?.forEach(model => {
+                    if (!acc[model.model]) {
+                        acc[model.model] = 0;
+                    }
+                    acc[model.model] += model.code_generation_activity_count;
+                });
+                return acc;
+            }, {});
+
+            const models = Object.keys(modelData).filter(model => model !== 'unknown');
+            const counts = models.map(model => modelData[model]);
+
+            const ctx = document.getElementById('modelUsageChart').getContext('2d');
+            charts.modelUsage = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: models,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: [
+                            '#e74c3c',
+                            '#3498db',
+                            '#2ecc71',
+                            '#f39c12',
+                            '#9b59b6',
+                            '#1abc9c'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // License distribution chart
+        function createLicenseDistributionChart() {
+            const licenseData = filteredData.reduce((acc, d) => {
+                const license = getUserLicense(d.user_login);
+                if (!acc[license]) {
+                    acc[license] = 0;
+                }
+                acc[license] += d.code_generation_activity_count;
+                return acc;
+            }, {});
+
+            const licenses = Object.keys(licenseData);
+            const counts = Object.values(licenseData);
+
+            const ctx = document.getElementById('licenseDistributionChart').getContext('2d');
+            charts.licenseDistribution = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: licenses,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: [
+                            '#3498db',
+                            '#e74c3c',
+                            '#2ecc71',
+                            '#f39c12',
+                            '#9b59b6',
+                            '#1abc9c',
+                            '#e67e22',
+                            '#34495e'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 6,
+                                font: { size: 10 },
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Activity by license type chart
+        function createLicenseActivityChart() {
+            const licenseData = filteredData.reduce((acc, d) => {
+                const license = getUserLicense(d.user_login);
+                if (!acc[license]) {
+                    acc[license] = {
+                        interactions: 0,
+                        generations: 0,
+                        acceptances: 0
+                    };
+                }
+                acc[license].interactions += d.user_initiated_interaction_count;
+                acc[license].generations += d.code_generation_activity_count;
+                acc[license].acceptances += d.code_acceptance_activity_count;
+                return acc;
+            }, {});
+
+            const licenses = Object.keys(licenseData);
+            const interactions = licenses.map(license => licenseData[license].interactions);
+            const generations = licenses.map(license => licenseData[license].generations);
+            const acceptances = licenses.map(license => licenseData[license].acceptances);
+
+            const ctx = document.getElementById('licenseActivityChart').getContext('2d');
+            charts.licenseActivity = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: licenses,
+                    datasets: [
+                        {
+                            label: 'User Interactions',
+                            data: interactions,
+                            backgroundColor: '#3498db'
+                        },
+                        {
+                            label: 'Code Generation',
+                            data: generations,
+                            backgroundColor: '#e74c3c'
+                        },
+                        {
+                            label: 'Code Acceptance',
+                            data: acceptances,
+                            backgroundColor: '#2ecc71'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                padding: 8,
+                                font: { size: 11 },
+                                usePointStyle: true
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'License Types',
+                                font: { size: 10 }
+                            },
+                            ticks: {
+                                font: { size: 9 }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Activity Count',
+                                font: { size: 10 }
+                            },
+                            ticks: {
+                                font: { size: 9 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // License usage trend chart
+        function createLicenseUsageTrendChart() {
+            const licenseData = filteredData.reduce((acc, d) => {
+                const date = d.day;
+                const license = getUserLicense(d.user_login);
+                
+                if (!acc[date]) {
+                    acc[date] = {};
+                }
+                if (!acc[date][license]) {
+                    acc[date][license] = 0;
+                }
+                acc[date][license] += d.code_generation_activity_count;
+                return acc;
+            }, {});
+
+            const dates = Object.keys(licenseData).sort();
+            const licenses = [...new Set(filteredData.map(d => getUserLicense(d.user_login)))];
+            
+            const datasets = licenses.map((license, index) => {
+                const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'];
+                return {
+                    label: license,
+                    data: dates.map(date => licenseData[date]?.[license] || 0),
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: `${colors[index % colors.length]}20`,
+                    tension: 0.4,
+                    fill: false
+                };
+            });
+
+            const ctx = document.getElementById('licenseUsageTrendChart').getContext('2d');
+            charts.licenseUsageTrend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                padding: 8,
+                                font: { size: 11 },
+                                usePointStyle: true
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date',
+                                font: { size: 10 },
+                                color: '#8b949e'
+                            },
+                            ticks: {
+                                font: { size: 9 },
+                                maxTicksLimit: 8,
+                                color: '#8b949e'
+                            },
+                            grid: {
+                                color: '#21262d'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Code Generation Count',
+                                font: { size: 10 },
+                                color: '#8b949e'
+                            },
+                            ticks: {
+                                font: { size: 9 },
+                                color: '#8b949e'
+                            },
+                            grid: {
+                                color: '#21262d'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Active vs Inactive users chart
+        function createActiveInactiveChart() {
+            // Gerçek inactive users mantığını kullan
+            const allRegistered = getAllRegisteredUsers();
+            const activeUsers = getActiveUsers();
+            const inactiveUsers = getInactiveUsers();
+            
+            const activeCount = activeUsers.length;
+            const inactiveCount = inactiveUsers.length;
+
+            const ctx = document.getElementById('activeInactiveChart').getContext('2d');
+            charts.activeInactive = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Active Users', 'Inactive Users'],
+                    datasets: [{
+                        data: [activeCount, inactiveCount],
+                        backgroundColor: [
+                            '#2ecc71', // Green for active
+                            '#e74c3c'  // Red for inactive
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 6,
+                                font: { size: 10 },
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = activeCount + inactiveCount;
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Inactive users license breakdown chart
+        function createInactiveUsersLicenseChart() {
+            // Gerçek inactive users'ları al
+            const inactiveUsers = getInactiveUsers();
+            
+            console.log('=== INACTIVE USERS LICENSE BREAKDOWN DEBUG ===');
+            console.log('Total inactive users:', inactiveUsers.length);
+            console.log('Inactive users list:', inactiveUsers);
+            
+            // Her inactive user için detaylı bilgi
+            inactiveUsers.forEach(user => {
+                const rawLicense = userLicenseMapping[user];
+                const category = getUserLicenseCategory(user);
+                console.log(`User: ${user}`);
+                console.log(`  Raw license: "${rawLicense}" (type: ${typeof rawLicense})`);
+                console.log(`  Category: ${category}`);
+            });
+            
+            // Inactive users'ların lisans kategorilerini say
+            const licenseData = inactiveUsers.reduce((acc, user) => {
+                const licenseCategory = getUserLicenseCategory(user);
+                if (!acc[licenseCategory]) {
+                    acc[licenseCategory] = 0;
+                }
+                acc[licenseCategory] += 1;
+                return acc;
+            }, {});
+
+            console.log('Final license data for chart:', licenseData);
+
+            const licenses = Object.keys(licenseData);
+            const counts = Object.values(licenseData);
+
+            // Eğer hiç inactive user yoksa, boş chart göster
+            if (inactiveUsers.length === 0) {
+                licenses.push('No Inactive Users');
+                counts.push(1);
+            }
+
+            const ctx = document.getElementById('inactiveUsersLicenseChart').getContext('2d');
+            charts.inactiveUsersLicense = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: licenses,
+                    datasets: [{
+                        label: 'Inactive Users Count',
+                        data: counts,
+                        backgroundColor: [
+                            '#e74c3c',
+                            '#f39c12',
+                            '#9b59b6',
+                            '#95a5a6'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    if (context.label === 'No Inactive Users') {
+                                        return 'All users are active!';
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'License Categories',
+                                font: { size: 10 }
+                            },
+                            ticks: {
+                                font: { size: 9 }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Number of Users',
+                                font: { size: 10 }
+                            },
+                            ticks: {
+                                font: { size: 9 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // User activity by license type chart
+        function createUserActivityByLicenseChart() {
+            // Gerçek active/inactive mantığını kullan
+            const activeUsers = getActiveUsers();
+            const inactiveUsers = getInactiveUsers();
+            
+            // Active users'ların lisans dağılımı
+            const activeLicenseStats = activeUsers.reduce((acc, user) => {
+                const licenseCategory = getUserLicenseCategory(user);
+                if (!acc[licenseCategory]) {
+                    acc[licenseCategory] = 0;
+                }
+                acc[licenseCategory] += 1;
+                return acc;
+            }, {});
+            
+            // Inactive users'ların lisans dağılımı
+            const inactiveLicenseStats = inactiveUsers.reduce((acc, user) => {
+                const licenseCategory = getUserLicenseCategory(user);
+                if (!acc[licenseCategory]) {
+                    acc[licenseCategory] = 0;
+                }
+                acc[licenseCategory] += 1;
+                return acc;
+            }, {});
+            
+            // Tüm lisans kategorilerini al
+            const allLicenseCategories = [...new Set([
+                ...Object.keys(activeLicenseStats),
+                ...Object.keys(inactiveLicenseStats)
+            ])];
+            
+            const activeData = allLicenseCategories.map(category => activeLicenseStats[category] || 0);
+            const inactiveData = allLicenseCategories.map(category => inactiveLicenseStats[category] || 0);
+
+            const ctx = document.getElementById('userActivityByLicenseChart').getContext('2d');
+            charts.userActivityByLicense = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: allLicenseCategories,
+                    datasets: [
+                        {
+                            label: 'Active Users',
+                            data: activeData,
+                            backgroundColor: '#2ecc71'
+                        },
+                        {
+                            label: 'Inactive Users',
+                            data: inactiveData,
+                            backgroundColor: '#e74c3c'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                padding: 8,
+                                font: { size: 11 },
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterBody: function(tooltipItems) {
+                                    const category = tooltipItems[0].label;
+                                    const active = activeLicenseStats[category] || 0;
+                                    const inactive = inactiveLicenseStats[category] || 0;
+                                    const total = active + inactive;
+                                    if (total > 0) {
+                                        const activePercent = ((active / total) * 100).toFixed(1);
+                                        return `Active Rate: ${activePercent}%`;
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'License Categories',
+                                font: { size: 10 }
+                            },
+                            ticks: {
+                                font: { size: 9 }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Number of Users',
+                                font: { size: 10 }
+                            },
+                            ticks: {
+                                font: { size: 9 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Display raw data
+        function displayRawData() {
+            const jsonViewer = document.getElementById('jsonViewer');
+            jsonViewer.textContent = JSON.stringify(rawData, null, 2);
+        }
+
+        // Download data
+        function downloadData() {
+            const dataStr = JSON.stringify(filteredData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = 'github-copilot-data.json';
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        // Show section
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionName).classList.add('active');
+            
+            // Add active class to clicked nav link
+            event.target.classList.add('active');
+        }
+
+        // Initialize dashboard
+        window.addEventListener('load', loadData);
+
+        // Chart expand functionality
+        let expandedChart = null;
+
+        function expandChart(chartId, title) {
+            console.log('expandChart called with:', chartId, title);
+            console.log('Available charts:', Object.keys(charts));
+            
+            const modal = document.getElementById('chartModal');
+            const modalTitle = document.getElementById('modalChartTitle');
+            const modalCanvas = document.getElementById('modalChartCanvas');
+            
+            if (!modal || !modalTitle || !modalCanvas) {
+                console.error('Modal elements not found:', { modal, modalTitle, modalCanvas });
+                return;
+            }
+            
+            // Map chart IDs to chart keys
+            const chartKeyMap = {
+                'dailyUsageChart': 'dailyUsage',
+                'userActivityChart': 'userActivity', 
+                'ideDistributionChart': 'ideDistribution',
+                'featureUsageChart': 'featureUsage',
+                'languageUsageChart': 'languageUsage',
+                'modelUsageChart': 'modelUsage',
+                'licenseDistributionChart': 'licenseDistribution',
+                'licenseActivityChart': 'licenseActivity',
+                'licenseUsageTrendChart': 'licenseUsageTrend',
+                'activeInactiveChart': 'activeInactive',
+                'inactiveUsersLicenseChart': 'inactiveUsersLicense',
+                'userActivityByLicenseChart': 'userActivityByLicense'
+            };
+            
+            // Get the original chart
+            const chartKey = chartKeyMap[chartId];
+            const originalChart = charts[chartKey];
+            
+            if (!originalChart) {
+                console.error('Chart not found:', chartId, 'Mapped to:', chartKey, 'Available charts:', Object.keys(charts));
+                alert('Chart not found: ' + chartId + '. Please check console for details.');
+                return;
+            }
+            
+            console.log('Found chart:', chartKey, originalChart);
+            
+            // Destroy any existing expanded chart
+            if (expandedChart) {
+                expandedChart.destroy();
+                expandedChart = null;
+            }
+            
+            // Set modal title and show modal first
+            modalTitle.textContent = title;
+            modal.classList.add('active');
+            
+            // Wait for modal to be visible before creating chart
+            setTimeout(() => {
+                // Clear and reset canvas
+                const ctx = modalCanvas.getContext('2d');
+                modalCanvas.width = 1140;
+                modalCanvas.height = 600;
+                ctx.clearRect(0, 0, modalCanvas.width, modalCanvas.height);
+                
+                // Create a deep copy of the chart configuration
+                const originalConfig = originalChart.config;
+                const config = {
+                    type: originalConfig.type,
+                    data: {
+                        labels: [...(originalConfig.data.labels || [])],
+                        datasets: originalConfig.data.datasets.map(dataset => ({
+                            ...dataset,
+                            data: [...(dataset.data || [])]
+                        }))
+                    },
+                    options: {
+                        ...originalConfig.options,
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            ...originalConfig.options.plugins,
+                            legend: {
+                                ...originalConfig.options.plugins?.legend,
+                                labels: {
+                                    ...originalConfig.options.plugins?.legend?.labels,
+                                    font: { size: 14 },
+                                    padding: 15
+                                }
+                            }
+                        },
+                        scales: originalConfig.options.scales ? {
+                            ...originalConfig.options.scales,
+                            x: {
+                                ...originalConfig.options.scales.x,
+                                ticks: {
+                                    ...originalConfig.options.scales.x?.ticks,
+                                    font: { size: 12 }
+                                }
+                            },
+                            y: {
+                                ...originalConfig.options.scales.y,
+                                ticks: {
+                                    ...originalConfig.options.scales.y?.ticks,
+                                    font: { size: 12 }
+                                }
+                            }
+                        } : undefined
+                    }
+                };
+                
+                console.log('Creating chart with config:', config);
+                
+                // Create new chart instance for modal
+                try {
+                    expandedChart = new Chart(ctx, config);
+                    console.log('Expanded chart created successfully:', expandedChart);
+                } catch (error) {
+                    console.error('Error creating expanded chart:', error);
+                    alert('Error creating chart: ' + error.message);
+                }
+                
+            }, 100); // Small delay to ensure modal is visible
+            
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeChart() {
+            const modal = document.getElementById('chartModal');
+            modal.classList.remove('active');
+            
+            // Destroy expanded chart
+            if (expandedChart) {
+                expandedChart.destroy();
+                expandedChart = null;
+            }
+            
+            // Restore body scroll
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && expandedChart) {
+                closeChart();
+            }
+        });
+
+        // Close modal on backdrop click
+        document.addEventListener('click', function(e) {
+            if (e.target.id === 'chartModal') {
+                closeChart();
+            }
+        });
+    </script>
+
+    <!-- Chart Modal -->
+    <div id="chartModal" class="chart-modal">
+        <div class="chart-modal-content">
+            <div class="chart-modal-header">
+                <h2 id="modalChartTitle" class="chart-modal-title">Chart Title</h2>
+                <button class="chart-modal-close" onclick="closeChart()">✕ Close</button>
+            </div>
+            <div class="chart-modal-wrapper">
+                <canvas id="modalChartCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,1648 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Copilot Raw Data Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', 'Consolas', 'Monaco', monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: #252526;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007acc;
+        }
+
+        .header h1 {
+            color: #007acc;
+            margin-bottom: 10px;
+        }
+
+        .filter-status {
+            background: #1e1e1e;
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #007acc;
+            display: none;
+        }
+
+        .filter-status.active {
+            display: block;
+        }
+
+        .filter-tag {
+            display: inline-block;
+            background: #007acc;
+            color: white;
+            padding: 5px 12px;
+            margin: 3px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+        }
+
+        .clear-filters-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            margin-left: 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .controls {
+            background: #252526;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-group label {
+            color: #cccccc;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .control-group input, .control-group select {
+            background: #1e1e1e;
+            border: 1px solid #3c3c3c;
+            color: #d4d4d4;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .control-group input:focus, .control-group select:focus {
+            outline: none;
+            border-color: #007acc;
+        }
+
+        .btn {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #005a9e;
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.secondary:hover {
+            background: #545b62;
+        }
+
+        .stats {
+            background: #252526;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #1e1e1e;
+            border-radius: 4px;
+            border: 1px solid #3c3c3c;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007acc;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #cccccc;
+            text-transform: uppercase;
+        }
+
+        .data-container {
+            background: #252526;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #3c3c3c;
+        }
+
+        .data-header {
+            background: #2d2d30;
+            padding: 15px 20px;
+            border-bottom: 1px solid #3c3c3c;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .data-content {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .record {
+            border-bottom: 1px solid #3c3c3c;
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .record:hover {
+            background: #2d2d30;
+        }
+
+        .record.expanded {
+            background: #2d2d30;
+        }
+
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .record-title {
+            font-weight: bold;
+            color: #007acc;
+        }
+
+        .record-summary {
+            color: #cccccc;
+            font-size: 14px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .record-details {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #3c3c3c;
+        }
+
+        .record.expanded .record-details {
+            display: block;
+        }
+
+        .json-block {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            white-space: pre;
+            border: 1px solid #3c3c3c;
+        }
+
+        .key {
+            color: #9cdcfe;
+        }
+
+        .string {
+            color: #ce9178;
+        }
+
+        .number {
+            color: #b5cea8;
+        }
+
+        .boolean {
+            color: #569cd6;
+        }
+
+        .null {
+            color: #808080;
+        }
+
+        .search-box {
+            width: 300px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 20px;
+            background: #252526;
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+
+        .page-info {
+            color: #cccccc;
+            margin: 0 20px;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .control-group {
+                width: 100%;
+            }
+
+            .stats {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 10px;
+            }
+
+            .record-summary {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+
+        /* Advanced JSON Tree View Styles */
+        .json-tree {
+            font-family: 'Cascadia Code', 'Fira Code', 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            background: #1e1e1e;
+            border: 1px solid #3c3c3c;
+            border-radius: 8px;
+            padding: 15px;
+            overflow: auto;
+            max-height: 600px;
+        }
+
+        .json-node {
+            margin-left: 0;
+        }
+
+        .json-node.collapsed > .json-children {
+            display: none;
+        }
+
+        .json-children {
+            margin-left: 20px;
+            border-left: 1px solid #3c3c3c;
+            padding-left: 10px;
+        }
+
+        .json-toggle {
+            display: inline-block;
+            width: 16px;
+            cursor: pointer;
+            user-select: none;
+            color: #cccccc;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .json-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        .json-toggle.empty {
+            visibility: hidden;
+        }
+
+        .json-key {
+            color: #9cdcfe;
+            font-weight: 500;
+        }
+
+        .json-string {
+            color: #ce9178;
+        }
+
+        .json-number {
+            color: #b5cea8;
+        }
+
+        .json-boolean {
+            color: #569cd6;
+            font-weight: bold;
+        }
+
+        .json-null {
+            color: #808080;
+            font-style: italic;
+        }
+
+        .json-bracket {
+            color: #d4d4d4;
+            font-weight: bold;
+        }
+
+        .json-comma {
+            color: #d4d4d4;
+        }
+
+        .json-colon {
+            color: #d4d4d4;
+            margin: 0 5px;
+        }
+
+        .json-line {
+            display: flex;
+            align-items: center;
+            padding: 2px 0;
+            border-radius: 3px;
+        }
+
+        .json-line:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .json-line.search-highlight {
+            background: rgba(255, 193, 7, 0.3);
+            border: 1px solid rgba(255, 193, 7, 0.6);
+        }
+
+        .json-path {
+            font-size: 11px;
+            color: #808080;
+            background: rgba(128, 128, 128, 0.1);
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 10px;
+            font-family: monospace;
+        }
+
+        .json-toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #252526;
+            border-radius: 6px;
+            align-items: center;
+        }
+
+        .json-search {
+            background: #1e1e1e;
+            border: 1px solid #3c3c3c;
+            color: #d4d4d4;
+            padding: 6px 10px;
+            border-radius: 4px;
+            width: 200px;
+        }
+
+        .json-search:focus {
+            outline: none;
+            border-color: #007acc;
+        }
+
+        .json-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .json-btn {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        .json-btn:hover {
+            background: #005a99;
+        }
+
+        .json-btn.secondary {
+            background: #6c757d;
+        }
+
+        .json-btn.secondary:hover {
+            background: #545b62;
+        }
+
+        .json-stats {
+            color: #cccccc;
+            font-size: 12px;
+            margin-left: auto;
+        }
+
+        /* Responsive Table Styles */
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .view-btn {
+            background: #3c3c3c;
+            color: #d4d4d4;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .view-btn.active {
+            background: #007acc;
+            color: white;
+        }
+
+        .view-btn:hover {
+            background: #555;
+        }
+
+        .view-btn.active:hover {
+            background: #005a99;
+        }
+
+        .table-container {
+            background: #1e1e1e;
+            border-radius: 8px;
+            border: 1px solid #3c3c3c;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .responsive-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .responsive-table th {
+            background: #252526;
+            color: #007acc;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #3c3c3c;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .responsive-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #3c3c3c;
+            vertical-align: top;
+            word-break: break-word;
+        }
+
+        .responsive-table tr:hover {
+            background: rgba(0, 122, 204, 0.1);
+        }
+
+        .responsive-table .user-cell {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .responsive-table .date-cell {
+            color: #9cdcfe;
+            font-family: 'Cascadia Code', monospace;
+        }
+
+        .responsive-table .number-cell {
+            text-align: right;
+            color: #b5cea8;
+            font-family: 'Cascadia Code', monospace;
+        }
+
+        .responsive-table .text-cell {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 1200px) {
+            .responsive-table {
+                font-size: 12px;
+            }
+            
+            .responsive-table th,
+            .responsive-table td {
+                padding: 8px 6px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .table-container {
+                overflow-x: auto;
+            }
+            
+            .responsive-table {
+                min-width: 800px;
+                font-size: 11px;
+            }
+            
+            .responsive-table th,
+            .responsive-table td {
+                padding: 6px 4px;
+            }
+            
+            .responsive-table .user-cell,
+            .responsive-table .text-cell {
+                max-width: 100px;
+            }
+        }
+
+        /* Table loading state */
+        .table-loading {
+            text-align: center;
+            padding: 40px;
+            color: #cccccc;
+        }
+
+        .table-loading .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #3c3c3c;
+            border-radius: 50%;
+            border-top-color: #007acc;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Card view for mobile alternative */
+        .card-view {
+            display: none;
+        }
+
+        .record-card {
+            background: #1e1e1e;
+            border: 1px solid #3c3c3c;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.2s;
+        }
+
+        .record-card:hover {
+            border-color: #007acc;
+            box-shadow: 0 2px 8px rgba(0, 122, 204, 0.2);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #3c3c3c;
+        }
+
+        .card-title {
+            color: #007acc;
+            font-weight: bold;
+        }
+
+        .card-date {
+            color: #9cdcfe;
+            font-size: 12px;
+        }
+
+        .card-body {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .card-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-label {
+            color: #cccccc;
+            font-size: 11px;
+            margin-bottom: 2px;
+        }
+
+        .card-value {
+            color: #d4d4d4;
+            font-size: 13px;
+        }
+
+        @media (max-width: 600px) {
+            .table-container {
+                display: none;
+            }
+            
+            .card-view {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📋 GitHub Copilot Raw Data Viewer</h1>
+            <p>Detailed data analysis and filtering tool</p>
+            <div style="margin-top: 15px;">
+                <a href="index.html" style="background: #007acc; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; margin-right: 10px; display: inline-block;">📊 Main Dashboard</a>
+                <a href="inactive-users.html" style="background: #ff4757; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; margin-right: 10px; display: inline-block;">🚫 Inactive Users</a>
+                <a href="data-manager.html" style="background: #28a745; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; display: inline-block;">📁 Data Manager</a>
+            </div>
+            <div class="filter-status" id="filterStatus">
+                <strong>🔍 Active Filters:</strong>
+                <div id="activeFilters"></div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="control-group">
+                <label>Search:</label>
+                <input type="text" id="searchInput" class="search-box" placeholder="Search user, date, IDE...">
+            </div>
+            <div class="control-group">
+                <label>Start Date:</label>
+                <input type="date" id="startDate">
+            </div>
+            <div class="control-group">
+                <label>End Date:</label>
+                <input type="date" id="endDate">
+            </div>
+            <div class="control-group">
+                <label>User:</label>
+                <select id="userSelect">
+                    <option value="">All Users</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>IDE:</label>
+                <select id="ideSelect">
+                    <option value="">All IDEs</option>
+                </select>
+            </div>
+            <button class="btn" onclick="applyFilters()">Filter</button>
+            <button class="btn secondary" onclick="clearFilters()">Clear</button>
+            <button class="btn secondary" onclick="clearAllFilters()">Clear All</button>
+            <button class="btn secondary" onclick="exportData()">Export</button>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats" id="stats">
+            <!-- Stats will be populated by JavaScript -->
+        </div>
+
+        <!-- Data Source Info -->
+        <div id="dataSourceInfo"></div>
+
+        <!-- View Toggle -->
+        <div class="view-toggle">
+            <button class="view-btn active" onclick="switchView('table')" id="tableViewBtn">📊 Table View</button>
+            <button class="view-btn" onclick="switchView('json')" id="jsonViewBtn">🗂️ JSON View</button>
+        </div>
+
+        <!-- Table View -->
+        <div class="table-view" id="tableView">
+            <div class="table-container">
+                <table class="responsive-table" id="dataTable">
+                    <thead>
+                        <tr id="tableHeaders">
+                            <!-- Headers will be populated by JavaScript -->
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Data rows will be populated by JavaScript -->
+                    </tbody>
+                </table>
+                <div class="table-loading" id="tableLoading" style="display: none;">
+                    <div class="spinner"></div>
+                    Loading data...
+                </div>
+            </div>
+            
+            <!-- Card view for mobile -->
+            <div class="card-view" id="cardView">
+                <!-- Cards will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- JSON View (existing) -->
+        <div class="json-view" id="jsonView" style="display: none;">
+            <!-- Data Container -->
+            <div class="data-container">
+                <div class="data-header">
+                    <span id="dataTitle">Data Records</span>
+                    <span id="recordCount">0 records</span>
+                </div>
+                <div class="data-content" id="dataContent">
+                    <!-- Records will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <button class="btn" onclick="previousPage()" id="prevBtn">« Previous</button>
+            <span class="page-info" id="pageInfo">Page 1 / 1</span>
+            <button class="btn" onclick="nextPage()" id="nextBtn">Next »</button>
+        </div>
+    </div>
+
+    <script>
+        let rawData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const recordsPerPage = 10;
+        let currentView = 'table'; // Default view
+
+        // View switching
+        function switchView(view) {
+            currentView = view;
+            
+            // Update button states
+            document.getElementById('tableViewBtn').classList.toggle('active', view === 'table');
+            document.getElementById('jsonViewBtn').classList.toggle('active', view === 'json');
+            
+            // Show/hide views
+            document.getElementById('tableView').style.display = view === 'table' ? 'block' : 'none';
+            document.getElementById('jsonView').style.display = view === 'json' ? 'block' : 'none';
+            
+            // Render current page data
+            renderCurrentPage();
+        }
+
+        // Render table view
+        function renderTableView(data) {
+            const tableHeaders = document.getElementById('tableHeaders');
+            const tableBody = document.getElementById('tableBody');
+            const cardView = document.getElementById('cardView');
+            
+            if (data.length === 0) {
+                tableHeaders.innerHTML = '<th colspan="100%">No data available</th>';
+                tableBody.innerHTML = '<tr><td colspan="100%" style="text-align: center; padding: 40px; color: #cccccc;">No records found</td></tr>';
+                cardView.innerHTML = '<div style="text-align: center; padding: 40px; color: #cccccc;">No records found</div>';
+                return;
+            }
+
+            // Get all unique keys from data for headers
+            const allKeys = new Set();
+            data.forEach(record => {
+                Object.keys(record).forEach(key => allKeys.add(key));
+            });
+            
+            const keys = Array.from(allKeys);
+            
+            // Create table headers
+            tableHeaders.innerHTML = keys.map(key => 
+                `<th>${formatColumnName(key)}</th>`
+            ).join('');
+            
+            // Create table rows
+            tableBody.innerHTML = data.map(record => {
+                return `<tr>${keys.map(key => {
+                    const value = record[key];
+                    const cellClass = getCellClass(key, value);
+                    const displayValue = formatCellValue(key, value);
+                    return `<td class="${cellClass}" title="${escapeHtml(value)}">${displayValue}</td>`;
+                }).join('')}</tr>`;
+            }).join('');
+            
+            // Create card view for mobile
+            cardView.innerHTML = data.map(record => {
+                return `
+                    <div class="record-card">
+                        <div class="card-header">
+                            <div class="card-title">${getUserDisplayName(record.user_login || 'Unknown')}</div>
+                            <div class="card-date">${formatCellValue('day', record.day)}</div>
+                        </div>
+                        <div class="card-body">
+                            ${keys.filter(key => key !== 'user_login' && key !== 'day').map(key => `
+                                <div class="card-field">
+                                    <div class="card-label">${formatColumnName(key)}</div>
+                                    <div class="card-value">${formatCellValue(key, record[key])}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Format column names for display
+        function formatColumnName(key) {
+            return key.replace(/_/g, ' ')
+                     .replace(/\b\w/g, l => l.toUpperCase())
+                     .replace(/Id/g, 'ID')
+                     .replace(/Api/g, 'API')
+                     .replace(/Ide/g, 'IDE');
+        }
+
+        // Get CSS class for table cell based on content
+        function getCellClass(key, value) {
+            if (key.includes('user') || key.includes('login')) return 'user-cell';
+            if (key.includes('date') || key.includes('day')) return 'date-cell';
+            if (typeof value === 'number') return 'number-cell';
+            return 'text-cell';
+        }
+
+        // Format cell values for display
+        function formatCellValue(key, value) {
+            if (value === null || value === undefined) return '-';
+            
+            if (key.includes('user') || key.includes('login')) {
+                return getUserDisplayName(value);
+            }
+            
+            if (key.includes('date') || key.includes('day')) {
+                try {
+                    const date = new Date(value);
+                    return date.toLocaleDateString('tr-TR');
+                } catch {
+                    return value;
+                }
+            }
+            
+            if (typeof value === 'number') {
+                return value.toLocaleString('tr-TR');
+            }
+            
+            if (typeof value === 'string' && value.length > 30) {
+                return value.substring(0, 30) + '...';
+            }
+            
+            return escapeHtml(value);
+        }
+
+        // Escape HTML for security
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Dinamik kullanıcı eşleme tablosu - CSV dosyasından doldurulacak
+        let userNameMapping = {};
+
+        // Kullanıcı ismini al (ID varsa gerçek ismi, yoksa ID'yi döndür)
+        function getUserDisplayName(userLogin) {
+            const realName = userNameMapping[userLogin];
+            return realName ? realName : userLogin;
+        }
+
+        // CSV verilerini yükle ve kullanıcı eşlemesini oluştur
+        async function loadUserMapping() {
+            try {
+                const selectedUserData = localStorage.getItem('selectedUserData');
+                let userDataPath = selectedUserData || 'data/users/export-sample-users.csv';
+                
+                // Eğer path data/ ile başlamıyorsa ekle
+                if (!userDataPath.startsWith('data/')) {
+                    userDataPath = `data/users/${userDataPath}`;
+                }
+                
+                const response = await fetch(userDataPath);
+                const csvText = await response.text();
+                
+                // CSV parse et
+                const lines = csvText.trim().split('\n');
+                const headers = lines[0].split(',');
+                
+                // GitHub com login ve GitHub com name sütunlarının indekslerini bul
+                const loginIndex = headers.findIndex(h => h.toLowerCase().includes('login'));
+                const nameIndex = headers.findIndex(h => h.toLowerCase().includes('name'));
+                
+                if (loginIndex !== -1 && nameIndex !== -1) {
+                    for (let i = 1; i < lines.length; i++) {
+                        const row = lines[i].split(',');
+                        if (row.length > Math.max(loginIndex, nameIndex)) {
+                            const login = row[loginIndex]?.trim();
+                            const name = row[nameIndex]?.trim();
+                            if (login && name && login !== 'GitHub com login') {
+                                userNameMapping[login] = name;
+                            }
+                        }
+                    }
+                }
+                
+                console.log('User mapping loaded:', Object.keys(userNameMapping).length, 'users');
+            } catch (error) {
+                console.warn('Could not load user mapping:', error);
+                // Fallback - boş mapping kullan
+                userNameMapping = {};
+            }
+        }
+
+        // Load data
+        async function loadData() {
+            try {
+                // Önce kullanıcı eşlemesini yükle
+                await loadUserMapping();
+                
+                // Check for selected data sources in localStorage
+                const selectedUsageData = localStorage.getItem('selectedUsageData');
+                
+                let dataFile = './data/usage/7d239eb2-952c-4b35-a593-15a380bd4480_1_2a5f476ee7394f47ad7dea0e9fa8b255.json';
+                
+                if (selectedUsageData && selectedUsageData !== 'none') {
+                    // If selectedUsageData already starts with data/, use as is (it's a full path), otherwise add path
+                    dataFile = selectedUsageData.startsWith('data/') ? selectedUsageData : `./data/usage/${selectedUsageData}`;
+                }
+                
+                const response = await fetch(dataFile);
+                const text = await response.text();
+                
+                // Parse JSONL format
+                rawData = text.trim().split('\n').map(line => {
+                    try {
+                        return JSON.parse(line);
+                    } catch (e) {
+                        console.error('Error parsing line:', line);
+                        return null;
+                    }
+                }).filter(item => item !== null);
+
+                filteredData = [...rawData];
+                
+                populateFilters();
+                updateStats();
+                showDataSourceInfo();
+                
+                // Initialize with table view
+                switchView('table');
+                
+                console.log('Data loaded:', rawData.length, 'records');
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('dataContent').innerHTML = `
+                    <div style="padding: 40px; text-align: center; color: #e74c3c;">
+                        <h3>Error Loading Data</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Show data source information
+        function showDataSourceInfo() {
+            const selectedUsageData = localStorage.getItem('selectedUsageData');
+            const usageDataName = selectedUsageData && selectedUsageData !== 'none' 
+                ? selectedUsageData 
+                : '7d239eb2-952c-4b35-a593-15a380bd4480_1_2a5f476ee7394f47ad7dea0e9fa8b255.json';
+            
+            const infoElement = document.getElementById('dataSourceInfo');
+            if (infoElement) {
+                infoElement.innerHTML = `
+                    <div style="background: #ecf0f1; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 0.9em;">
+                        <strong>Data Source:</strong> Usage Data: ${usageDataName} | 
+                        <a href="data-manager.html" style="color: #3498db;">Change Data Source</a>
+                    </div>
+                `;
+            }
+        }
+
+        // Populate filter options
+        function populateFilters() {
+            const users = [...new Set(rawData.map(d => d.user_login))].sort();
+            const ides = [...new Set(rawData.flatMap(d => d.totals_by_ide?.map(ide => ide.ide) || []))].sort();
+
+            const userSelect = document.getElementById('userSelect');
+            const ideSelect = document.getElementById('ideSelect');
+
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user;
+                option.textContent = getUserDisplayName(user);
+                userSelect.appendChild(option);
+            });
+
+            ides.forEach(ide => {
+                const option = document.createElement('option');
+                option.value = ide;
+                option.textContent = ide.toUpperCase();
+                ideSelect.appendChild(option);
+            });
+
+            // Set date range
+            const dates = rawData.map(d => d.day).sort();
+            if (dates.length > 0) {
+                document.getElementById('startDate').value = dates[0];
+                document.getElementById('endDate').value = dates[dates.length - 1];
+            }
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const userFilter = document.getElementById('userSelect').value;
+            const ideFilter = document.getElementById('ideSelect').value;
+
+            filteredData = rawData.filter(d => {
+                let valid = true;
+
+                // Search filter
+                if (searchTerm) {
+                    const searchableText = JSON.stringify(d).toLowerCase();
+                    if (!searchableText.includes(searchTerm)) {
+                        valid = false;
+                    }
+                }
+
+                // Date filters
+                if (startDate && d.day < startDate) valid = false;
+                if (endDate && d.day > endDate) valid = false;
+
+                // User filter
+                if (userFilter && d.user_login !== userFilter) valid = false;
+
+                // IDE filter
+                if (ideFilter && !d.totals_by_ide?.some(ide => ide.ide === ideFilter)) valid = false;
+
+                return valid;
+            });
+
+            currentPage = 1;
+            updateFilterStatus(searchTerm, startDate, endDate, userFilter, ideFilter);
+            updateStats();
+            displayRecords();
+        }
+
+        // Update filter status display
+        function updateFilterStatus(searchTerm, startDate, endDate, userFilter, ideFilter) {
+            const filterStatus = document.getElementById('filterStatus');
+            const activeFilters = document.getElementById('activeFilters');
+            
+            let filters = [];
+            
+            if (searchTerm) {
+                filters.push(`<span class="filter-tag">🔍 "${searchTerm}"</span>`);
+            }
+            
+            if (startDate || endDate) {
+                const start = startDate || 'Start';
+                const end = endDate || 'End';
+                filters.push(`<span class="filter-tag">📅 ${start} - ${end}</span>`);
+            }
+            
+            if (userFilter) {
+                filters.push(`<span class="filter-tag">👤 ${getUserDisplayName(userFilter)}</span>`);
+            }
+            
+            if (ideFilter) {
+                filters.push(`<span class="filter-tag">💻 ${ideFilter.toUpperCase()}</span>`);
+            }
+            
+            if (filters.length > 0) {
+                activeFilters.innerHTML = filters.join('') + 
+                    '<button class="clear-filters-btn" onclick="clearAllFilters()">✖ Clear</button>';
+                filterStatus.classList.add('active');
+            } else {
+                filterStatus.classList.remove('active');
+            }
+        }
+
+        // Clear all filters
+        function clearAllFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            document.getElementById('userSelect').value = '';
+            document.getElementById('ideSelect').value = '';
+            
+            // Reset date range to full range
+            const dates = rawData.map(d => d.day).sort();
+            if (dates.length > 0) {
+                document.getElementById('startDate').value = dates[0];
+                document.getElementById('endDate').value = dates[dates.length - 1];
+            }
+            
+            filteredData = [...rawData];
+            currentPage = 1;
+            updateFilterStatus('', '', '', '', '');
+            updateStats();
+            displayRecords();
+        }
+
+        // Clear filters
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('userSelect').value = '';
+            document.getElementById('ideSelect').value = '';
+            
+            const dates = rawData.map(d => d.day).sort();
+            if (dates.length > 0) {
+                document.getElementById('startDate').value = dates[0];
+                document.getElementById('endDate').value = dates[dates.length - 1];
+            }
+
+            filteredData = [...rawData];
+            currentPage = 1;
+            updateStats();
+            displayRecords();
+        }
+
+        // Update statistics
+        function updateStats() {
+            const stats = calculateStats();
+            const statsContainer = document.getElementById('stats');
+            
+            statsContainer.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${stats.totalRecords}</div>
+                    <div class="stat-label">Total Records</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${stats.uniqueUsers}</div>
+                    <div class="stat-label">Unique Users</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${stats.dateRange}</div>
+                    <div class="stat-label">Date Range</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${stats.totalInteractions.toLocaleString()}</div>
+                    <div class="stat-label">Total Interactions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${stats.totalGenerations.toLocaleString()}</div>
+                    <div class="stat-label">Code Generations</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${stats.avgAcceptanceRate}%</div>
+                    <div class="stat-label">Acceptance Rate</div>
+                </div>
+            `;
+        }
+
+        // Calculate statistics
+        function calculateStats() {
+            const uniqueUsers = new Set(filteredData.map(d => d.user_login)).size;
+            const dates = filteredData.map(d => d.day).sort();
+            const dateRange = dates.length > 0 ? `${dates[0]} - ${dates[dates.length - 1]}` : 'N/A';
+            const totalInteractions = filteredData.reduce((sum, d) => sum + d.user_initiated_interaction_count, 0);
+            const totalGenerations = filteredData.reduce((sum, d) => sum + d.code_generation_activity_count, 0);
+            const totalAcceptances = filteredData.reduce((sum, d) => sum + d.code_acceptance_activity_count, 0);
+            const avgAcceptanceRate = totalGenerations > 0 ? Math.round((totalAcceptances / totalGenerations) * 100) : 0;
+
+            return {
+                totalRecords: filteredData.length,
+                uniqueUsers,
+                dateRange,
+                totalInteractions,
+                totalGenerations,
+                avgAcceptanceRate
+            };
+        }
+
+        // Display records
+        function displayRecords() {
+            renderCurrentPage();
+        }
+
+        // Render current page based on view
+        function renderCurrentPage() {
+            const startIndex = (currentPage - 1) * recordsPerPage;
+            const endIndex = startIndex + recordsPerPage;
+            const pageData = filteredData.slice(startIndex, endIndex);
+
+            if (currentView === 'table') {
+                renderTableView(pageData);
+            } else {
+                renderJsonView(pageData, startIndex);
+            }
+
+            updatePagination();
+            updateRecordCount();
+        }
+
+        // Render JSON view (existing functionality)
+        function renderJsonView(pageData, startIndex) {
+            const dataContent = document.getElementById('dataContent');
+            
+            if (pageData.length === 0) {
+                dataContent.innerHTML = `
+                    <div style="padding: 40px; text-align: center; color: #cccccc;">
+                        <h3>No Records Found</h3>
+                        <p>No data found matching the filters.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            dataContent.innerHTML = pageData.map((record, index) => {
+                const globalIndex = startIndex + index;
+                return createRecordHTML(record, globalIndex);
+            }).join('');
+        }
+
+        // Create record HTML
+        function createRecordHTML(record, index) {
+            const ideList = record.totals_by_ide?.map(ide => ide.ide.toUpperCase()).join(', ') || 'N/A';
+            const agentStatus = record.used_agent ? '✅ Yes' : '❌ No';
+            const chatStatus = record.used_chat ? '✅ Yes' : '❌ No';
+
+            return `
+                <div class="record" onclick="toggleRecord(${index})">
+                    <div class="record-header">
+                        <div class="record-title">${getUserDisplayName(record.user_login)} - ${record.day}</div>
+                        <div style="color: #007acc;">Record #${index + 1}</div>
+                    </div>
+                    <div class="record-summary">
+                        <span>📊 Interactions: ${record.user_initiated_interaction_count}</span>
+                        <span>🔧 Code Gen: ${record.code_generation_activity_count}</span>
+                        <span>✅ Accepted: ${record.code_acceptance_activity_count}</span>
+                        <span>💻 IDE: ${ideList}</span>
+                        <span>🤖 Agent: ${agentStatus}</span>
+                        <span>💬 Chat: ${chatStatus}</span>
+                    </div>
+                    <div class="record-details" id="details-${index}">
+                        <div class="json-toolbar">
+                            <input type="text" class="json-search" placeholder="Search in JSON..." onkeyup="searchInJson(${index}, this.value)">
+                            <div class="json-controls">
+                                <button class="json-btn" onclick="expandAllNodes(${index})">Expand All</button>
+                                <button class="json-btn secondary" onclick="collapseAllNodes(${index})">Collapse All</button>
+                                <button class="json-btn secondary" onclick="copyJsonToClipboard(${index})">Copy JSON</button>
+                            </div>
+                            <div class="json-stats" id="json-stats-${index}"></div>
+                        </div>
+                        <div class="json-tree" id="json-tree-${index}">
+                            ${createJsonTree(record, '', index)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Toggle record details
+        function toggleRecord(index) {
+            const record = document.querySelector(`.record:nth-child(${index + 1})`);
+            record.classList.toggle('expanded');
+            
+            // Update JSON stats when expanded
+            if (record.classList.contains('expanded')) {
+                setTimeout(() => updateJsonStats(index), 100);
+            }
+        }
+
+        // Update pagination
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredData.length / recordsPerPage);
+            
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} / ${totalPages}`;
+            document.getElementById('prevBtn').disabled = currentPage <= 1;
+            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+        }
+
+        // Update record count
+        function updateRecordCount() {
+            const startIndex = (currentPage - 1) * recordsPerPage;
+            const endIndex = Math.min(startIndex + recordsPerPage, filteredData.length);
+            document.getElementById('recordCount').textContent = 
+                `${startIndex + 1}-${endIndex} / ${filteredData.length} records`;
+        }
+
+        // Previous page
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                displayRecords();
+            }
+        }
+
+        // Next page
+        function nextPage() {
+            const totalPages = Math.ceil(filteredData.length / recordsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                displayRecords();
+            }
+        }
+
+        // Export data
+        function exportData() {
+            const dataStr = JSON.stringify(filteredData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `github-copilot-filtered-data-${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        // Search on Enter key
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                applyFilters();
+            }
+        });
+
+        // Advanced JSON Tree View Functions
+        function createJsonTree(obj, path = '', recordIndex = 0, isRoot = true) {
+            if (obj === null) {
+                return `<span class="json-null">null</span>`;
+            }
+
+            const type = Array.isArray(obj) ? 'array' : typeof obj;
+            
+            switch (type) {
+                case 'string':
+                    return `<span class="json-string">"${escapeHtml(obj)}"</span>`;
+                case 'number':
+                    return `<span class="json-number">${obj}</span>`;
+                case 'boolean':
+                    return `<span class="json-boolean">${obj}</span>`;
+                case 'array':
+                    return createArrayNode(obj, path, recordIndex);
+                case 'object':
+                    return createObjectNode(obj, path, recordIndex, isRoot);
+                default:
+                    return `<span class="json-null">null</span>`;
+            }
+        }
+
+        function createObjectNode(obj, path, recordIndex, isRoot = false) {
+            const keys = Object.keys(obj);
+            const nodeId = `node-${recordIndex}-${path.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            const hasChildren = keys.length > 0;
+            
+            if (keys.length === 0) {
+                return `<span class="json-bracket">{}</span>`;
+            }
+
+            let html = '';
+            if (!isRoot) {
+                html += `<div class="json-line">`;
+                html += `<span class="json-toggle ${hasChildren ? '' : 'empty'}" onclick="toggleJsonNode('${nodeId}')">${hasChildren ? '▼' : ''}</span>`;
+                html += `<span class="json-bracket">{</span>`;
+                html += `<span class="json-path">${path || 'root'}</span>`;
+                html += `</div>`;
+            }
+
+            html += `<div class="json-node ${isRoot ? '' : 'collapsed'}" id="${nodeId}">`;
+            html += `<div class="json-children">`;
+            
+            keys.forEach((key, index) => {
+                const currentPath = path ? `${path}.${key}` : key;
+                const isLast = index === keys.length - 1;
+                
+                html += `<div class="json-line" data-path="${currentPath}" data-key="${key}">`;
+                
+                const value = obj[key];
+                const valueType = Array.isArray(value) ? 'array' : typeof value;
+                const hasNestedChildren = valueType === 'object' && value !== null && Object.keys(value).length > 0;
+                
+                if (hasNestedChildren || valueType === 'array') {
+                    const nestedNodeId = `node-${recordIndex}-${currentPath.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                    html += `<span class="json-toggle" onclick="toggleJsonNode('${nestedNodeId}')">▼</span>`;
+                } else {
+                    html += `<span class="json-toggle empty"></span>`;
+                }
+                
+                html += `<span class="json-key">"${escapeHtml(key)}"</span>`;
+                html += `<span class="json-colon">:</span>`;
+                
+                if (valueType === 'object' && value !== null) {
+                    html += createJsonTree(value, currentPath, recordIndex, false);
+                } else {
+                    html += createJsonTree(value, currentPath, recordIndex, false);
+                }
+                
+                if (!isLast) {
+                    html += `<span class="json-comma">,</span>`;
+                }
+                
+                html += `</div>`;
+            });
+            
+            html += `</div>`;
+            html += `</div>`;
+            
+            if (!isRoot) {
+                html += `<div class="json-line"><span class="json-toggle empty"></span><span class="json-bracket">}</span></div>`;
+            }
+            
+            return html;
+        }
+
+        function createArrayNode(arr, path, recordIndex) {
+            const nodeId = `node-${recordIndex}-${path.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            const hasChildren = arr.length > 0;
+            
+            if (arr.length === 0) {
+                return `<span class="json-bracket">[]</span>`;
+            }
+
+            let html = `<div class="json-line">`;
+            html += `<span class="json-toggle ${hasChildren ? '' : 'empty'}" onclick="toggleJsonNode('${nodeId}')">${hasChildren ? '▼' : ''}</span>`;
+            html += `<span class="json-bracket">[</span>`;
+            html += `<span class="json-path">${path} (${arr.length} items)</span>`;
+            html += `</div>`;
+
+            html += `<div class="json-node" id="${nodeId}">`;
+            html += `<div class="json-children">`;
+            
+            arr.forEach((item, index) => {
+                const currentPath = `${path}[${index}]`;
+                const isLast = index === arr.length - 1;
+                
+                html += `<div class="json-line" data-path="${currentPath}" data-index="${index}">`;
+                
+                const valueType = Array.isArray(item) ? 'array' : typeof item;
+                const hasNestedChildren = valueType === 'object' && item !== null && Object.keys(item).length > 0;
+                
+                if (hasNestedChildren || valueType === 'array') {
+                    const nestedNodeId = `node-${recordIndex}-${currentPath.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                    html += `<span class="json-toggle" onclick="toggleJsonNode('${nestedNodeId}')">▼</span>`;
+                } else {
+                    html += `<span class="json-toggle empty"></span>`;
+                }
+                
+                html += `<span class="json-key">${index}</span>`;
+                html += `<span class="json-colon">:</span>`;
+                html += createJsonTree(item, currentPath, recordIndex, false);
+                
+                if (!isLast) {
+                    html += `<span class="json-comma">,</span>`;
+                }
+                
+                html += `</div>`;
+            });
+            
+            html += `</div>`;
+            html += `</div>`;
+            html += `<div class="json-line"><span class="json-toggle empty"></span><span class="json-bracket">]</span></div>`;
+            
+            return html;
+        }
+
+        function toggleJsonNode(nodeId) {
+            const node = document.getElementById(nodeId);
+            const toggle = document.querySelector(`[onclick="toggleJsonNode('${nodeId}')"]`);
+            
+            if (node) {
+                node.classList.toggle('collapsed');
+                if (toggle) {
+                    toggle.textContent = node.classList.contains('collapsed') ? '▶' : '▼';
+                }
+            }
+        }
+
+        function expandAllNodes(recordIndex) {
+            const container = document.getElementById(`json-tree-${recordIndex}`);
+            const nodes = container.querySelectorAll('.json-node.collapsed');
+            const toggles = container.querySelectorAll('.json-toggle');
+            
+            nodes.forEach(node => node.classList.remove('collapsed'));
+            toggles.forEach(toggle => {
+                if (!toggle.classList.contains('empty')) {
+                    toggle.textContent = '▼';
+                }
+            });
+            
+            updateJsonStats(recordIndex);
+        }
+
+        function collapseAllNodes(recordIndex) {
+            const container = document.getElementById(`json-tree-${recordIndex}`);
+            const nodes = container.querySelectorAll('.json-node:not(.collapsed)');
+            const toggles = container.querySelectorAll('.json-toggle');
+            
+            nodes.forEach(node => node.classList.add('collapsed'));
+            toggles.forEach(toggle => {
+                if (!toggle.classList.contains('empty')) {
+                    toggle.textContent = '▶';
+                }
+            });
+            
+            updateJsonStats(recordIndex);
+        }
+
+        function searchInJson(recordIndex, searchTerm) {
+            const container = document.getElementById(`json-tree-${recordIndex}`);
+            const lines = container.querySelectorAll('.json-line');
+            
+            // Clear previous highlights
+            lines.forEach(line => line.classList.remove('search-highlight'));
+            
+            if (!searchTerm.trim()) {
+                updateJsonStats(recordIndex);
+                return;
+            }
+            
+            let matchCount = 0;
+            const searchLower = searchTerm.toLowerCase();
+            
+            lines.forEach(line => {
+                const text = line.textContent.toLowerCase();
+                const path = line.dataset.path || '';
+                const key = line.dataset.key || '';
+                
+                if (text.includes(searchLower) || path.toLowerCase().includes(searchLower) || key.toLowerCase().includes(searchLower)) {
+                    line.classList.add('search-highlight');
+                    matchCount++;
+                    
+                    // Expand parent nodes to show matches
+                    let parent = line.closest('.json-node');
+                    while (parent) {
+                        parent.classList.remove('collapsed');
+                        const toggle = document.querySelector(`[onclick*="${parent.id}"]`);
+                        if (toggle && !toggle.classList.contains('empty')) {
+                            toggle.textContent = '▼';
+                        }
+                        parent = parent.parentElement.closest('.json-node');
+                    }
+                }
+            });
+            
+            updateJsonStats(recordIndex, `${matchCount} matches found`);
+        }
+
+        function copyJsonToClipboard(recordIndex) {
+            const record = filteredData[(currentPage - 1) * recordsPerPage + recordIndex];
+            const jsonText = JSON.stringify(record, null, 2);
+            
+            navigator.clipboard.writeText(jsonText).then(() => {
+                updateJsonStats(recordIndex, 'JSON copied to clipboard!');
+                setTimeout(() => updateJsonStats(recordIndex), 2000);
+            }).catch(() => {
+                updateJsonStats(recordIndex, 'Failed to copy to clipboard');
+                setTimeout(() => updateJsonStats(recordIndex), 2000);
+            });
+        }
+
+        function updateJsonStats(recordIndex, message = '') {
+            const statsElement = document.getElementById(`json-stats-${recordIndex}`);
+            if (statsElement) {
+                if (message) {
+                    statsElement.textContent = message;
+                } else {
+                    const container = document.getElementById(`json-tree-${recordIndex}`);
+                    const totalNodes = container.querySelectorAll('.json-line').length;
+                    const visibleNodes = container.querySelectorAll('.json-line:not(.json-node.collapsed .json-line)').length;
+                    statsElement.textContent = `${visibleNodes}/${totalNodes} nodes visible`;
+                }
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        window.addEventListener('load', loadData);
+    </script>
+</body>
+</html>

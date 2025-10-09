@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inactive Users - GitHub Copilot Analytics</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', 'Consolas', 'Monaco', monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #161b22;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .header {
+            background: #21262d;
+            color: #f0f6fc;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .header p {
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+
+        .stats-bar {
+            background: #21262d;
+            padding: 15px 20px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #f85149;
+            font-family: inherit;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #8b949e;
+            margin-top: 5px;
+        }
+
+        .controls {
+            padding: 20px 30px;
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .sort-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .sort-select, .filter-select {
+            padding: 8px 12px;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            font-size: 1rem;
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: inherit;
+        }
+
+        .export-btn {
+            background: #238636;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-family: inherit;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .export-btn:hover {
+            background: #2ea043;
+        }
+
+        .users-grid {
+            padding: 15px;
+            background: #161b22;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 10px;
+        }
+
+        .user-card {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 12px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            height: fit-content;
+        }
+
+        .user-card:hover {
+            border-color: #f85149;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(248, 81, 73, 0.2);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff7b7b 0%, #667eea 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #f0f6fc;
+            margin-bottom: 3px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+
+        .user-login {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-bottom: 6px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .user-details {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .detail-icon {
+            font-size: 0.9rem;
+        }
+
+        .license-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: white;
+        }
+
+        .license-badge.enterprise {
+            background: #2ecc71;
+        }
+
+        .license-badge.not-specified {
+            background: #e74c3c;
+        }
+
+        .license-badge.other {
+            background: #f39c12;
+        }
+
+        .status-badge {
+            background: #ff4757;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .no-results .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .users-grid {
+                grid-template-columns: 1fr;
+                padding: 10px;
+                gap: 8px;
+            }
+
+            .user-card {
+                padding: 10px;
+                gap: 10px;
+            }
+
+            .user-avatar {
+                width: 35px;
+                height: 35px;
+                font-size: 1rem;
+            }
+
+            .user-name {
+                font-size: 0.95rem;
+            }
+
+            .user-login {
+                font-size: 0.8rem;
+            }
+
+            .detail-item {
+                font-size: 0.75rem;
+            }
+
+            .license-badge, .status-badge {
+                font-size: 0.65rem;
+                padding: 1px 6px;
+            }
+
+            .user-details {
+                justify-content: center;
+            }
+
+            .stats-bar {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="back-btn" onclick="window.location.href='index.html'">← Back to Dashboard</button>
+
+    <div class="container">
+        <div class="header">
+            <h1>🚫 Inactive Users</h1>
+            <p>Users with no GitHub Copilot activity</p>
+        </div>
+
+        <!-- Data Source Info -->
+        <div id="dataSourceInfo"></div>
+
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-number" id="totalInactiveUsers">0</div>
+                <div class="stat-label">Inactive Users</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="totalRegisteredUsers">0</div>
+                <div class="stat-label">Total Registered Users</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="inactivePercentage">0%</div>
+                <div class="stat-label">Inactive Rate</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Search user (name or code)..." oninput="filterUsers()">
+            </div>
+            <div class="filter-controls">
+                <label for="licenseFilter">License Type:</label>
+                <select id="licenseFilter" class="filter-select" onchange="filterUsers()">
+                    <option value="">All License Types</option>
+                    <option value="Enterprise">Enterprise</option>
+                    <option value="Not Specified">Not Specified</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="sort-controls">
+                <label for="sortSelect">Sort by:</label>
+                <select id="sortSelect" class="sort-select" onchange="sortUsers()">
+                    <option value="name">By Name</option>
+                    <option value="login">By Code</option>
+                    <option value="license">By License Type</option>
+                </select>
+            </div>
+            <button class="export-btn" onclick="exportToCSV()">📊 Export to CSV</button>
+        </div>
+
+        <div class="users-grid" id="usersGrid">
+            <!-- İnaktif kullanıcılar buraya yüklenecek -->
+        </div>
+    </div>
+
+    <script>
+        let allUsers = [];
+        let activeUsers = [];
+        let inactiveUsers = [];
+        let filteredInactiveUsers = [];
+
+        // CSV verilerini parse et
+        async function parseCSV() {
+            try {
+                // Check for selected data sources in localStorage
+                const selectedUserData = localStorage.getItem('selectedUserData');
+                
+                let userFile = 'export-sample-users.csv';
+                
+                if (selectedUserData && selectedUserData !== 'none') {
+                    // If selectedUserData already starts with data/, use as is (it's a full path), otherwise add path
+                    userFile = selectedUserData.startsWith('data/') ? selectedUserData : `./data/users/${selectedUserData}`;
+                }
+                
+                const response = await fetch(userFile);
+                const csvText = await response.text();
+                
+                const lines = csvText.trim().split('\n');
+                const headers = lines[0].split(',');
+                
+                return lines.slice(1).map(line => {
+                    const values = parseCSVLine(line);
+                    const user = {};
+                    headers.forEach((header, index) => {
+                        user[header.trim()] = values[index] ? values[index].trim() : '';
+                    });
+                    return user;
+                });
+            } catch (error) {
+                console.error('CSV parse hatası:', error);
+                return [];
+            }
+        }
+
+        // CSV satırını parse et (tırnak içindeki virgülleri dikkate alarak)
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            result.push(current);
+            return result;
+        }
+
+        // JSON verilerini yükle
+        async function loadJSONData() {
+            try {
+                // Check for selected data sources in localStorage
+                const selectedUsageData = localStorage.getItem('selectedUsageData');
+                
+                let dataFile = '7d239eb2-952c-4b35-a593-15a380bd4480_1_2a5f476ee7394f47ad7dea0e9fa8b255.json';
+                
+                if (selectedUsageData && selectedUsageData !== 'none') {
+                    // If selectedUsageData already starts with data/, use as is (it's a full path), otherwise add path
+                    dataFile = selectedUsageData.startsWith('data/') ? selectedUsageData : `./data/usage/${selectedUsageData}`;
+                }
+                
+                const response = await fetch(dataFile);
+                const text = await response.text();
+                
+                return text.trim().split('\n')
+                    .filter(line => line.trim())
+                    .map(line => JSON.parse(line));
+            } catch (error) {
+                console.error('JSON yükleme hatası:', error);
+                return [];
+            }
+        }
+
+        // Kullanıcı adını gösterme formatı
+        function getUserDisplayName(login, realName) {
+            if (realName && realName.trim() && realName !== login) {
+                return realName;
+            }
+            return login;
+        }
+
+        // İnaktif kullanıcıları tespit et
+        async function findInactiveUsers() {
+            // CSV'den tüm kullanıcıları al
+            allUsers = await parseCSV();
+            
+            // JSON'dan aktif kullanıcıları al
+            const jsonData = await loadJSONData();
+            const activeUserLogins = new Set(jsonData.map(d => d.user_login));
+            
+            // İnaktif kullanıcıları filtrele
+            inactiveUsers = allUsers.filter(user => {
+                const login = user['GitHub com login'];
+                return login && !activeUserLogins.has(login) && login !== 'admin_user';
+            });
+            
+            filteredInactiveUsers = [...inactiveUsers];
+            
+            populateLicenseFilter();
+            updateStats();
+            displayUsers();
+        }
+
+        // License filter dropdown'unu populate et
+        function populateLicenseFilter() {
+            const licenseFilter = document.getElementById('licenseFilter');
+            const licenses = new Set();
+            
+            inactiveUsers.forEach(user => {
+                const license = user['License type'] || '';
+                if (license.trim() === 'Enterprise') {
+                    licenses.add('Enterprise');
+                } else if (!license || license.trim() === '') {
+                    licenses.add('Not Specified');
+                } else {
+                    licenses.add('Other');
+                }
+            });
+            
+            // Mevcut options'ları temizle (All License Types hariç)
+            while (licenseFilter.children.length > 1) {
+                licenseFilter.removeChild(licenseFilter.lastChild);
+            }
+            
+            // Sadece mevcut license türlerini ekle
+            [...licenses].sort().forEach(license => {
+                const option = document.createElement('option');
+                option.value = license;
+                option.textContent = license;
+                licenseFilter.appendChild(option);
+            });
+        }
+
+        // İstatistikleri güncelle
+        function updateStats() {
+            const totalRegistered = allUsers.length;
+            const totalInactive = inactiveUsers.length;
+            const filteredCount = filteredInactiveUsers.length;
+            const inactivePercentage = totalRegistered > 0 ? Math.round((totalInactive / totalRegistered) * 100) : 0;
+            
+            // Ana sayıları güncelle
+            document.getElementById('totalInactiveUsers').textContent = totalInactive;
+            document.getElementById('totalRegisteredUsers').textContent = totalRegistered;
+            document.getElementById('inactivePercentage').textContent = `${inactivePercentage}%`;
+            
+            // Eğer filter uygulanmışsa, filtrelenmiş sayıyı da göster
+            const inactiveElement = document.getElementById('totalInactiveUsers');
+            if (filteredCount !== totalInactive) {
+                inactiveElement.textContent = `${filteredCount} / ${totalInactive}`;
+                inactiveElement.parentElement.querySelector('.stat-label').textContent = 'Filtered / Total Inactive';
+            } else {
+                inactiveElement.parentElement.querySelector('.stat-label').textContent = 'Inactive Users';
+            }
+        }
+
+        // Kullanıcıları görüntüle
+        function displayUsers() {
+            const usersGrid = document.getElementById('usersGrid');
+            
+            if (filteredInactiveUsers.length === 0) {
+                usersGrid.innerHTML = `
+                    <div class="no-results">
+                        <div class="icon">🔍</div>
+                        <h3>No Users Found</h3>
+                        <p>No inactive users found matching your search criteria.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            usersGrid.innerHTML = filteredInactiveUsers.map(user => {
+                const login = user['GitHub com login'] || '';
+                const name = user['GitHub com name'] || '';
+                const licenseType = user['License type'] || 'Not Specified';
+                const profileUrl = user['GitHub com profile'] || '';
+                const twoFA = user['GitHub com two factor auth'] === 'true';
+                
+                const initials = name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 
+                                login.substring(0, 2).toUpperCase();
+                
+                // License badge CSS class'ını belirle
+                let licenseBadgeClass = '';
+                if (licenseType === 'Enterprise') {
+                    licenseBadgeClass = 'enterprise';
+                } else if (licenseType === 'Not Specified' || !licenseType.trim()) {
+                    licenseBadgeClass = 'not-specified';
+                } else {
+                    licenseBadgeClass = 'other';
+                }
+                
+                return `
+                    <div class="user-card">
+                        <div class="user-avatar">${initials}</div>
+                        <div class="user-info">
+                            <div class="user-name">${getUserDisplayName(login, name)}</div>
+                            <div class="user-login">@${login}</div>
+                            <div class="user-details">
+                                <div class="detail-item">
+                                    <span class="detail-icon">📜</span>
+                                    <span class="license-badge ${licenseBadgeClass}">${licenseType}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-icon">🔒</span>
+                                    <span>2FA: ${twoFA ? 'Active' : 'Inactive'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-icon">⚡</span>
+                                    <span class="status-badge">Inactive</span>
+                                </div>
+                                ${profileUrl ? `
+                                <div class="detail-item">
+                                    <span class="detail-icon">🔗</span>
+                                    <a href="${profileUrl}" target="_blank" style="color: #3742fa;">GitHub Profile</a>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Kullanıcıları filtrele
+        function filterUsers() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const licenseFilter = document.getElementById('licenseFilter').value;
+            
+            filteredInactiveUsers = inactiveUsers.filter(user => {
+                const login = (user['GitHub com login'] || '').toLowerCase();
+                const name = (user['GitHub com name'] || '').toLowerCase();
+                const license = user['License type'] || '';
+                
+                // Search term kontrolü
+                const matchesSearch = login.includes(searchTerm) || name.includes(searchTerm);
+                
+                // License filter kontrolü
+                let matchesLicense = true;
+                if (licenseFilter) {
+                    if (licenseFilter === 'Enterprise') {
+                        matchesLicense = license.trim() === 'Enterprise';
+                    } else if (licenseFilter === 'Not Specified') {
+                        matchesLicense = !license || license.trim() === '';
+                    } else if (licenseFilter === 'Other') {
+                        matchesLicense = license && license.trim() !== '' && license.trim() !== 'Enterprise';
+                    }
+                }
+                
+                return matchesSearch && matchesLicense;
+            });
+            
+            displayUsers();
+            updateStats();
+        }
+
+        // Kullanıcıları sırala
+        function sortUsers() {
+            const sortBy = document.getElementById('sortSelect').value;
+            
+            filteredInactiveUsers.sort((a, b) => {
+                let aValue, bValue;
+                
+                switch(sortBy) {
+                    case 'name':
+                        aValue = (a['GitHub com name'] || a['GitHub com login'] || '').toLowerCase();
+                        bValue = (b['GitHub com name'] || b['GitHub com login'] || '').toLowerCase();
+                        break;
+                    case 'login':
+                        aValue = (a['GitHub com login'] || '').toLowerCase();
+                        bValue = (b['GitHub com login'] || '').toLowerCase();
+                        break;
+                    case 'license':
+                        aValue = (a['License type'] || '').toLowerCase();
+                        bValue = (b['License type'] || '').toLowerCase();
+                        break;
+                    default:
+                        return 0;
+                }
+                
+                return aValue.localeCompare(bValue, 'tr');
+            });
+            
+            displayUsers();
+        }
+
+        // CSV olarak dışa aktar
+        function exportToCSV() {
+            const headers = ['Login', 'Name', 'License Type', '2FA Status', 'Profile URL'];
+            const csvData = [headers];
+            
+            filteredInactiveUsers.forEach(user => {
+                csvData.push([
+                    user['GitHub com login'] || '',
+                    user['GitHub com name'] || '',
+                    user['License type'] || '',
+                    user['GitHub com two factor auth'] === 'true' ? 'Active' : 'Inactive',
+                    user['GitHub com profile'] || ''
+                ]);
+            });
+            
+            const csvContent = csvData.map(row => 
+                row.map(field => `"${field}"`).join(',')
+            ).join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `inactive-users-${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+
+        // Show data source information
+        function showDataSourceInfo() {
+            const selectedUsageData = localStorage.getItem('selectedUsageData');
+            const selectedUserData = localStorage.getItem('selectedUserData');
+            
+            const usageDataName = selectedUsageData && selectedUsageData !== 'none' 
+                ? selectedUsageData 
+                : '7d239eb2-952c-4b35-a593-15a380bd4480_1_2a5f476ee7394f47ad7dea0e9fa8b255.json';
+            
+            const userDataName = selectedUserData && selectedUserData !== 'none' 
+                ? selectedUserData 
+                : 'export-sample-users.csv';
+            
+            const infoElement = document.getElementById('dataSourceInfo');
+            if (infoElement) {
+                infoElement.innerHTML = `
+                    <div style="background: #ecf0f1; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 0.9em;">
+                        <strong>Data Sources:</strong> Usage Data: ${usageDataName} | User Data: ${userDataName} | 
+                        <a href="data-manager.html" style="color: #3498db;">Change Data Sources</a>
+                    </div>
+                `;
+            }
+        }
+
+        // Sayfa yüklendiğinde çalışacak
+        document.addEventListener('DOMContentLoaded', function() {
+            showDataSourceInfo();
+            findInactiveUsers();
+        });
+    </script>
+</body>
+</html>

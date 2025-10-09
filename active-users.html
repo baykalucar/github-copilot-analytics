@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Users - GitHub Copilot Analytics</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', 'Consolas', 'Monaco', monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #161b22;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .header {
+            background: #21262d;
+            color: #f0f6fc;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .header p {
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+
+        .stats-bar {
+            background: #21262d;
+            padding: 15px 20px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #58a6ff;
+            font-family: inherit;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #8b949e;
+        }
+
+        .controls {
+            padding: 20px;
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            padding: 12px 15px;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            font-size: 1rem;
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-box:focus {
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.1);
+        }
+
+        .sort-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .sort-select {
+            padding: 8px 12px;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            outline: none;
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: inherit;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .sort-select:focus {
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.1);
+        }
+
+        .filter-btn {
+            background: #238636;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-family: inherit;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .filter-btn:hover {
+            background: #2ea043;
+        }
+
+        .users-grid {
+            padding: 15px;
+            background: #161b22;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 12px;
+        }
+
+        .user-card {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            height: fit-content;
+            position: relative;
+        }
+
+        .user-card:hover {
+            border-color: #58a6ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(88, 166, 255, 0.15);
+        }
+
+        .score-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ffa657;
+            color: #0d1117;
+            padding: 6px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: inherit;
+            box-shadow: 0 2px 8px rgba(255, 166, 87, 0.3);
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .score-badge.high {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .score-badge.medium {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+
+        .score-badge.low {
+            background: #58a6ff;
+            color: #0d1117;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #238636;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.3rem;
+            font-weight: 600;
+            font-family: inherit;
+            flex-shrink: 0;
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #f0f6fc;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+
+        .user-login {
+            font-size: 0.9rem;
+            color: #8b949e;
+            margin-bottom: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .user-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .metric-item {
+            text-align: center;
+            padding: 4px;
+            background: #30363d;
+            border-radius: 4px;
+        }
+
+        .metric-value {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #f0f6fc;
+            font-family: inherit;
+        }
+
+        .metric-label {
+            font-size: 0.7rem;
+            color: #8b949e;
+            margin-top: 2px;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8b949e;
+            background: #161b22;
+        }
+
+        .no-results .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-family: inherit;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .back-btn:hover {
+            background: #30363d;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .users-grid {
+                grid-template-columns: 1fr;
+                padding: 10px;
+                gap: 10px;
+            }
+
+            .user-card {
+                padding: 12px;
+                gap: 12px;
+            }
+
+            .user-avatar {
+                width: 40px;
+                height: 40px;
+                font-size: 1.1rem;
+            }
+
+            .user-name {
+                font-size: 1rem;
+            }
+
+            .user-login {
+                font-size: 0.85rem;
+            }
+
+            .score-badge {
+                font-size: 0.8rem;
+                padding: 6px 10px;
+                min-width: 50px;
+            }
+
+            .stats-bar {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="back-btn" onclick="window.location.href='index.html'">← Back to Dashboard</button>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Active Users</h1>
+            <p>Active users ranked by AI Usage Score</p>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-value" id="totalUsers">-</div>
+                <div class="stat-label">Total Active Users</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="avgScore">-</div>
+                <div class="stat-label">Average AI Score</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="highScoreUsers">-</div>
+                <div class="stat-label">High Score (80+)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalInteractions">-</div>
+                <div class="stat-label">Total Interactions</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search users...">
+            <div class="sort-controls">
+                <select class="sort-select" id="sortSelect">
+                    <option value="score">AI Score (High→Low)</option>
+                    <option value="interactions">Interactions</option>
+                    <option value="generations">Code Generation</option>
+                    <option value="acceptances">Accepted</option>
+                    <option value="name">Name (A→Z)</option>
+                </select>
+                <select class="sort-select" id="scoreFilter">
+                    <option value="all">All Scores</option>
+                    <option value="high">High (80+)</option>
+                    <option value="medium">Medium (50-79)</option>
+                    <option value="low">Low (0-49)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="users-grid" id="usersGrid">
+            <!-- Users will be populated here -->
+        </div>
+
+        <div class="no-results" id="noResults" style="display: none;">
+            <div class="icon">🔍</div>
+            <h3>No users found</h3>
+            <p>No active users match your search criteria.</p>
+        </div>
+    </div>
+
+    <script>
+        let allUsers = [];
+        let filteredUsers = [];
+        let userDisplayNames = {}; // Kullanıcı display isimlerini saklamak için
+
+        // Kullanıcı display isimlerini yükle
+        async function loadUserDisplayNames() {
+            try {
+                // Data-manager'dan seçilen dosyayı öncelikle kontrol et
+                const selectedUserData = localStorage.getItem('selectedUserData');
+                const dataSource = localStorage.getItem('dataSource') || 'data/users/';
+                let response;
+                
+                try {
+                    // Önce seçilen dosyayı dene
+                    if (selectedUserData) {
+                        response = await fetch(selectedUserData);
+                    } else {
+                        response = await fetch(`${dataSource}export-sample-users.csv`);
+                    }
+                } catch (error) {
+                    try {
+                        response = await fetch(`${dataSource}inactive_copilot_members.csv`);
+                    } catch (error2) {
+                        response = await fetch(`export-sample-users.csv`);
+                    }
+                }
+                
+                if (!response.ok) {
+                    console.warn('Kullanıcı isimleri yüklenemedi, login isimleri kullanılacak');
+                    return;
+                }
+                
+                const csvText = await response.text();
+                const lines = csvText.trim().split('\n');
+                
+                if (lines.length > 1) {
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                    
+                    // GitHub com login ve GitHub com name sütunlarının indeksini bul
+                    const loginIndex = headers.findIndex(h => h.toLowerCase().includes('login'));
+                    const nameIndex = headers.findIndex(h => h.toLowerCase().includes('name'));
+                    
+                    for (let i = 1; i < lines.length; i++) {
+                        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                        
+                        if (loginIndex >= 0 && nameIndex >= 0 && values[loginIndex] && values[nameIndex]) {
+                            const login = values[loginIndex];
+                            const name = values[nameIndex];
+                            
+                            // Sadece boş olmayan isimleri kaydet
+                            if (name && name.trim() !== '') {
+                                userDisplayNames[login] = name;
+                            }
+                        }
+                    }
+                }
+                
+                console.log('Yüklenen kullanıcı isimleri:', Object.keys(userDisplayNames).length);
+                
+            } catch (error) {
+                console.warn('Kullanıcı isimleri yüklenirken hata:', error);
+            }
+        }
+
+        // Kullanıcı display ismi
+        function getUserDisplayName(login) {
+            return userDisplayNames[login] || login.replace(/[^a-zA-Z0-9]/g, '').substring(0, 20) || 'User';
+        }
+
+        // Kullanıcı tam adını oluştur (isim + login)
+        function getUserFullName(login) {
+            const displayName = getUserDisplayName(login);
+            
+            // Eğer display name login ile aynı ise, sadece onu döndür
+            if (displayName === login) {
+                return displayName;
+            }
+            
+            return `${displayName} (@${login})`;
+        }
+
+        // AI Usage Score hesaplama fonksiyonu
+        function calculateAIScore(user) {
+            const interactions = user.user_initiated_interaction_count || 0;
+            const generations = user.code_generation_activity_count || 0;
+            const acceptances = user.code_acceptance_activity_count || 0;
+            
+            // Score bileşenleri
+            const interactionScore = Math.min(interactions * 2, 40);  // Max 40 puan
+            const generationScore = Math.min(generations * 3, 40);    // Max 40 puan
+            const acceptanceScore = Math.min(acceptances * 4, 20);    // Max 20 puan
+            
+            // Kabul oranı bonusu
+            const acceptanceRate = generations > 0 ? (acceptances / generations) : 0;
+            const acceptanceBonus = acceptanceRate * 10; // Max 10 puan
+            
+            // Aktivite tutarlılığı (eğer tüm metrikler > 0 ise bonus)
+            const consistencyBonus = (interactions > 0 && generations > 0 && acceptances > 0) ? 5 : 0;
+            
+            const totalScore = Math.min(
+                interactionScore + generationScore + acceptanceScore + acceptanceBonus + consistencyBonus,
+                100
+            );
+            
+            return Math.round(totalScore);
+        }
+
+        // Score'a göre badge sınıfı belirleme
+        function getScoreBadgeClass(score) {
+            if (score >= 80) return 'high';
+            if (score >= 50) return 'medium';
+            return 'low';
+        }
+
+        // Kullanıcı kartı oluşturma
+        function createUserCard(user) {
+            const displayName = getUserDisplayName(user.user_login);
+            const fullName = getUserFullName(user.user_login);
+            const score = calculateAIScore(user);
+            const scoreClass = getScoreBadgeClass(score);
+            
+            return `
+                <div class="user-card">
+                    <div class="score-badge ${scoreClass}">${score}</div>
+                    <div class="user-avatar">
+                        ${displayName.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">${displayName}</div>
+                        <div class="user-login">@${user.user_login}</div>
+                        <div class="user-metrics">
+                            <div class="metric-item">
+                                <div class="metric-value">${user.user_initiated_interaction_count || 0}</div>
+                                <div class="metric-label">Interactions</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">${user.code_generation_activity_count || 0}</div>
+                                <div class="metric-label">Code Generation</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">${user.code_acceptance_activity_count || 0}</div>
+                                <div class="metric-label">Accepted</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">${user.code_generation_activity_count > 0 ? Math.round((user.code_acceptance_activity_count / user.code_generation_activity_count) * 100) : 0}%</div>
+                                <div class="metric-label">Acceptance Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Kullanıcıları render etme
+        function renderUsers(users) {
+            const grid = document.getElementById('usersGrid');
+            const noResults = document.getElementById('noResults');
+            
+            if (users.length === 0) {
+                grid.style.display = 'none';
+                noResults.style.display = 'block';
+                return;
+            }
+            
+            grid.style.display = 'grid';
+            noResults.style.display = 'none';
+            grid.innerHTML = users.map(createUserCard).join('');
+        }
+
+        // İstatistikleri güncelleme
+        function updateStats(users) {
+            const totalUsers = users.length;
+            const scores = users.map(calculateAIScore);
+            const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+            const highScoreUsers = scores.filter(score => score >= 80).length;
+            const totalInteractions = users.reduce((sum, user) => sum + (user.user_initiated_interaction_count || 0), 0);
+            
+            document.getElementById('totalUsers').textContent = totalUsers;
+            document.getElementById('avgScore').textContent = avgScore;
+            document.getElementById('highScoreUsers').textContent = highScoreUsers;
+            document.getElementById('totalInteractions').textContent = totalInteractions.toLocaleString();
+        }
+
+        // Filtreleme ve sıralama
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const sortBy = document.getElementById('sortSelect').value;
+            const scoreFilter = document.getElementById('scoreFilter').value;
+            
+            let filtered = allUsers.filter(user => {
+                // Arama filtresi
+                const displayName = getUserDisplayName(user.user_login).toLowerCase();
+                const fullName = getUserFullName(user.user_login).toLowerCase();
+                const login = user.user_login.toLowerCase();
+                const matchesSearch = displayName.includes(searchTerm) || 
+                                    fullName.includes(searchTerm) || 
+                                    login.includes(searchTerm);
+                
+                // Score filtresi
+                const score = calculateAIScore(user);
+                let matchesScore = true;
+                if (scoreFilter === 'high') matchesScore = score >= 80;
+                else if (scoreFilter === 'medium') matchesScore = score >= 50 && score < 80;
+                else if (scoreFilter === 'low') matchesScore = score < 50;
+                
+                return matchesSearch && matchesScore;
+            });
+            
+            // Sıralama
+            filtered.sort((a, b) => {
+                switch (sortBy) {
+                    case 'score':
+                        return calculateAIScore(b) - calculateAIScore(a);
+                    case 'interactions':
+                        return (b.user_initiated_interaction_count || 0) - (a.user_initiated_interaction_count || 0);
+                    case 'generations':
+                        return (b.code_generation_activity_count || 0) - (a.code_generation_activity_count || 0);
+                    case 'acceptances':
+                        return (b.code_acceptance_activity_count || 0) - (a.code_acceptance_activity_count || 0);
+                    case 'name':
+                        return getUserFullName(a.user_login).localeCompare(getUserFullName(b.user_login));
+                    default:
+                        return 0;
+                }
+            });
+            
+            filteredUsers = filtered;
+            renderUsers(filteredUsers);
+            updateStats(filteredUsers);
+        }
+
+        // Veri yükleme
+        async function loadData() {
+            try {
+                // Önce kullanıcı display isimlerini yükle
+                await loadUserDisplayNames();
+                
+                // Data-manager'dan seçilen dosyayı öncelikle kontrol et
+                const selectedUsageData = localStorage.getItem('selectedUsageData');
+                const dataSource = localStorage.getItem('dataSource') || 'data/usage/';
+                let response;
+                
+                try {
+                    // Önce seçilen dosyayı dene
+                    if (selectedUsageData) {
+                        response = await fetch(selectedUsageData);
+                    } else {
+                        response = await fetch(`${dataSource}7d239eb2-952c-4b35-a593-15a380bd4480_1_2a5f476ee7394f47ad7dea0e9fa8b255.json`);
+                    }
+                } catch (error) {
+                    response = await fetch(`7d239eb2-952c-4b35-a593-15a380bd4480_1_2a5f476ee7394f47ad7dea0e9fa8b255.json`);
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const text = await response.text();
+                let rawData;
+                
+                try {
+                    // Önce normal JSON olarak parse etmeyi dene
+                    rawData = JSON.parse(text);
+                } catch (jsonError) {
+                    // Eğer normal JSON parse edilemezse, JSONL (her satır ayrı JSON) formatı olabilir
+                    try {
+                        rawData = text.trim().split('\n')
+                            .filter(line => line.trim())
+                            .map(line => JSON.parse(line.trim()));
+                    } catch (jsonlError) {
+                        throw new Error(`JSON parse hatası: ${jsonError.message}. JSONL parse hatası: ${jsonlError.message}`);
+                    }
+                }
+                
+                // Eğer array değilse array'e çevir
+                if (!Array.isArray(rawData)) {
+                    rawData = [rawData];
+                }
+                
+                // Kullanıcıları günlük verilerden aggregate et
+                const userStats = {};
+                rawData.forEach(entry => {
+                    const login = entry.user_login;
+                    if (!userStats[login]) {
+                        userStats[login] = {
+                            user_login: login,
+                            user_initiated_interaction_count: 0,
+                            code_generation_activity_count: 0,
+                            code_acceptance_activity_count: 0
+                        };
+                    }
+                    
+                    userStats[login].user_initiated_interaction_count += entry.user_initiated_interaction_count || 0;
+                    userStats[login].code_generation_activity_count += entry.code_generation_activity_count || 0;
+                    userStats[login].code_acceptance_activity_count += entry.code_acceptance_activity_count || 0;
+                });
+                
+                // Aktif kullanıcıları filtrele (en az bir aktivitesi olan)
+                allUsers = Object.values(userStats).filter(user => 
+                    user.user_initiated_interaction_count > 0 ||
+                    user.code_generation_activity_count > 0 ||
+                    user.code_acceptance_activity_count > 0
+                );
+                
+                applyFilters();
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('usersGrid').innerHTML = `
+                    <div class="no-results">
+                        <div class="icon">⚠️</div>
+                        <h3>Could Not Load Data</h3>
+                        <p>Error: ${error.message}</p>
+                        <p style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                            File format should be JSONL (each line separate JSON). Check data source.
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        // Event listeners
+        document.getElementById('searchBox').addEventListener('input', applyFilters);
+        document.getElementById('sortSelect').addEventListener('change', applyFilters);
+        document.getElementById('scoreFilter').addEventListener('change', applyFilters);
+
+        // Sayfa yüklendiğinde veriyi yükle
+        window.addEventListener('load', loadData);
+    </script>
+</body>
+</html>
