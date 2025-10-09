@@ -438,7 +438,7 @@
                 const lines = csvText.trim().split('\n');
                 const headers = parseCSVLine(lines[0]); // Header'ları da parseCSVLine ile parse et
                 
-                return lines.slice(1).map(line => {
+                const users = lines.slice(1).map(line => {
                     const values = parseCSVLine(line);
                     const user = {};
                     headers.forEach((header, index) => {
@@ -446,6 +446,8 @@
                     });
                     return user;
                 });
+                
+                return users;
             } catch (error) {
                 console.error('CSV parse hatası:', error);
                 return [];
@@ -464,14 +466,14 @@
                 if (char === '"') {
                     inQuotes = !inQuotes;
                 } else if (char === ',' && !inQuotes) {
-                    result.push(current);
+                    result.push(current.replace(/^"(.*)"$/, '$1')); // Tırnakları temizle
                     current = '';
                 } else {
                     current += char;
                 }
             }
             
-            result.push(current);
+            result.push(current.replace(/^"(.*)"$/, '$1')); // Son değer için de tırnakları temizle
             return result;
         }
 

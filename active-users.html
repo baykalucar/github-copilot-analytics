@@ -505,14 +505,14 @@
                 if (char === '"') {
                     inQuotes = !inQuotes;
                 } else if (char === ',' && !inQuotes) {
-                    result.push(current);
+                    result.push(current.replace(/^"(.*)"$/, '$1')); // Tırnakları temizle
                     current = '';
                 } else {
                     current += char;
                 }
             }
             
-            result.push(current);
+            result.push(current.replace(/^"(.*)"$/, '$1')); // Son değer için de tırnakları temizle
             return result;
         }
 
