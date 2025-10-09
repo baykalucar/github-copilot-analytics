@@ -465,18 +465,18 @@
                 const lines = csvText.trim().split('\n');
                 
                 if (lines.length > 1) {
-                    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                    const headers = parseCSVLine(lines[0]); // Header'ları da parseCSVLine ile parse et
                     
                     // GitHub com login ve GitHub com name sütunlarının indeksini bul
                     const loginIndex = headers.findIndex(h => h.toLowerCase().includes('login'));
                     const nameIndex = headers.findIndex(h => h.toLowerCase().includes('name'));
                     
                     for (let i = 1; i < lines.length; i++) {
-                        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                        const values = parseCSVLine(lines[i]); // parseCSVLine kullan
                         
                         if (loginIndex >= 0 && nameIndex >= 0 && values[loginIndex] && values[nameIndex]) {
-                            const login = values[loginIndex];
-                            const name = values[nameIndex];
+                            const login = values[loginIndex].trim();
+                            const name = values[nameIndex].trim();
                             
                             // Sadece boş olmayan isimleri kaydet
                             if (name && name.trim() !== '') {
@@ -491,6 +491,29 @@
             } catch (error) {
                 console.warn('Kullanıcı isimleri yüklenirken hata:', error);
             }
+        }
+
+        // CSV satırını parse et (tırnak içindeki virgülleri dikkate alarak)
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            result.push(current);
+            return result;
         }
 
         // Kullanıcı display ismi

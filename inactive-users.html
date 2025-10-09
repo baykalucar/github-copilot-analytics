@@ -436,7 +436,7 @@
                 const csvText = await response.text();
                 
                 const lines = csvText.trim().split('\n');
-                const headers = lines[0].split(',');
+                const headers = parseCSVLine(lines[0]); // Header'ları da parseCSVLine ile parse et
                 
                 return lines.slice(1).map(line => {
                     const values = parseCSVLine(line);
