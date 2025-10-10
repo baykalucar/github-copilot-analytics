@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -123,6 +123,133 @@
             border-color: #58a6ff;
         }
 
+        .stat-card.insight {
+            background: linear-gradient(135deg, #1a1f36 0%, #2d3748 100%);
+            border: 1px solid #4299e1;
+            box-shadow: 0 4px 15px rgba(66, 153, 225, 0.2);
+        }
+
+        .stat-card.insight:hover {
+            border-color: #63b3ed;
+            box-shadow: 0 6px 20px rgba(66, 153, 225, 0.3);
+        }
+
+        .stat-card.insight .stat-number {
+            color: #63b3ed;
+        }
+
+        .stat-card.productivity {
+            background: linear-gradient(135deg, #1a2e1a 0%, #2d5016 100%);
+            border: 1px solid #38a169;
+            box-shadow: 0 4px 15px rgba(56, 161, 105, 0.2);
+        }
+
+        .stat-card.productivity:hover {
+            border-color: #48bb78;
+            box-shadow: 0 6px 20px rgba(56, 161, 105, 0.3);
+        }
+
+        .stat-card.productivity .stat-number {
+            color: #48bb78;
+        }
+
+        .stat-card.efficiency {
+            background: linear-gradient(135deg, #2d1b69 0%, #553c9a 100%);
+            border: 1px solid #805ad5;
+            box-shadow: 0 4px 15px rgba(128, 90, 213, 0.2);
+        }
+
+        .stat-card.efficiency:hover {
+            border-color: #9f7aea;
+            box-shadow: 0 6px 20px rgba(128, 90, 213, 0.3);
+        }
+
+        .stat-card.efficiency .stat-number {
+            color: #9f7aea;
+        }
+
+        /* Tooltip Styles */
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip {
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #21262d;
+            color: #c9d1d9;
+            padding: 12px 16px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            font-size: 0.75rem;
+            line-height: 1.4;
+            width: 280px;
+            text-align: left;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+            pointer-events: none;
+        }
+
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #21262d;
+        }
+
+        .tooltip-container:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .tooltip-title {
+            font-weight: 600;
+            color: #f0f6fc;
+            margin-bottom: 6px;
+            font-size: 0.8rem;
+        }
+
+        .tooltip-formula {
+            background: #0d1117;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            margin: 4px 0;
+            color: #58a6ff;
+        }
+
+        .help-icon {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 16px;
+            height: 16px;
+            background: #30363d;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #8b949e;
+            cursor: help;
+            transition: background 0.2s;
+        }
+
+        .help-icon:hover {
+            background: #58a6ff;
+            color: #fff;
+        }
+
         .stat-number {
             font-size: 2rem;
             font-weight: 600;
@@ -134,7 +261,6 @@
         .stat-label {
             color: #8b949e;
             font-size: 0.8rem;
-            text-transform: uppercase;
             letter-spacing: 0.5px;
             font-weight: 500;
         }
@@ -418,9 +544,38 @@
 
         @media (max-width: 768px) {
             .stats-grid {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 15px;
-                padding: 20px;
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 12px;
+                padding: 15px;
+            }
+            
+            .stat-card {
+                padding: 15px;
+            }
+            
+            .stat-number {
+                font-size: 1.5rem;
+            }
+            
+            .stat-label {
+                font-size: 0.7rem;
+            }
+
+            /* Mobile tooltip adjustments */
+            .tooltip {
+                width: 240px;
+                font-size: 0.7rem;
+                padding: 10px 12px;
+            }
+            
+            .tooltip-formula {
+                font-size: 0.65rem;
+            }
+            
+            .help-icon {
+                width: 14px;
+                height: 14px;
+                font-size: 9px;
             }
 
             .filters {
@@ -977,7 +1132,7 @@
             ides.forEach(ide => {
                 const option = document.createElement('option');
                 option.value = ide;
-                option.textContent = ide.toUpperCase();
+                option.textContent = ide.toLocaleUpperCase('en-US');
                 ideSelect.appendChild(option);
             });
 
@@ -1030,7 +1185,7 @@
             }
             
             if (ideFilter) {
-                filters.push(`<span class="filter-tag">💻 ${ideFilter.toUpperCase()}</span>`);
+                filters.push(`<span class="filter-tag">💻 ${ideFilter.toLocaleUpperCase('en-US')}</span>`);
             }
             
             if (filters.length > 0) {
@@ -1068,6 +1223,7 @@
             const statsGrid = document.getElementById('statsGrid');
             
             statsGrid.innerHTML = `
+                <!-- Basic Metrics -->
                 <div class="stat-card">
                     <div class="stat-number">${stats.totalUsers}</div>
                     <div class="stat-label">Total Users</div>
@@ -1100,6 +1256,111 @@
                     <div class="stat-number">${stats.agentUsage}%</div>
                     <div class="stat-label">Agent Usage</div>
                 </div>
+                
+                <!-- Advanced Insights - Productivity -->
+                <div class="stat-card productivity tooltip-container">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">${stats.fteCapacity}</div>
+                    <div class="stat-label">💼 Extra FTE Capacity (Months)</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">Extra FTE Capacity</div>
+                        <p>Estimates additional developer capacity gained through code acceptance automation.</p>
+                        <div class="tooltip-formula">Formula: (Acceptances × 2 min) ÷ (8h×20d)</div>
+                        <p><strong>Assumptions:</strong> Each accepted suggestion saves 2 minutes of coding time. Based on 8-hour workdays, 20 working days per month.</p>
+                    </div>
+                </div>
+                <div class="stat-card productivity tooltip-container">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">${stats.codingTimeSavings}%</div>
+                    <div class="stat-label">⏱️ Coding Time Savings</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">Coding Time Savings</div>
+                        <p>Percentage of total coding time saved through AI assistance.</p>
+                        <div class="tooltip-formula">Formula: (Lines Added ÷ 50) ÷ (Users × 8h × 20d) × 100</div>
+                        <p><strong>Assumptions:</strong> Developers write ~50 lines per hour normally. Calculation based on total monthly development time.</p>
+                    </div>
+                </div>
+                <div class="stat-card productivity tooltip-container">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">${stats.acceptanceAdjustedCapacity}</div>
+                    <div class="stat-label">📊 Acceptance-Adjusted Capacity</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">Acceptance-Adjusted Capacity</div>
+                        <p>FTE capacity adjusted for actual code acceptance quality.</p>
+                        <div class="tooltip-formula">Formula: FTE Capacity × (Acceptance Rate ÷ 100)</div>
+                        <p><strong>Purpose:</strong> Provides realistic capacity gains by factoring in code quality and developer approval rates.</p>
+                    </div>
+                </div>
+                <div class="stat-card productivity tooltip-container">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">${stats.netLinesContribution}</div>
+                    <div class="stat-label">📈 Net Code Contribution</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">Net Code Contribution</div>
+                        <p>Total lines of code contributed after accounting for deletions.</p>
+                        <div class="tooltip-formula">Formula: Lines Added - Lines Deleted</div>
+                        <p><strong>Insight:</strong> Positive values indicate net codebase growth. Higher values suggest productive development activity.</p>
+                    </div>
+                </div>
+                
+                <!-- Advanced Insights - Efficiency -->
+                <div class="stat-card efficiency tooltip-container">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">${stats.avgUsagePerUser}</div>
+                    <div class="stat-label">👤 Avg Usage Per User</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">Average Usage Per User</div>
+                        <p>Average number of interactions each active user has with GitHub Copilot.</p>
+                        <div class="tooltip-formula">Formula: Total Interactions ÷ Active Users</div>
+                        <p><strong>Benchmark:</strong> Higher values indicate deeper engagement. Typical range: 50-200 interactions per user per period.</p>
+                    </div>
+                </div>
+                <div class="stat-card efficiency tooltip-container">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">${stats.activeUserRatio}%</div>
+                    <div class="stat-label">🎯 Active User Ratio</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">Active User Ratio</div>
+                        <p>Percentage of licensed users who actively use GitHub Copilot.</p>
+                        <div class="tooltip-formula">Formula: (Active Users ÷ Total Licensed Users) × 100</div>
+                        <p><strong>Target:</strong> 70%+ indicates good adoption. Lower values suggest need for training or onboarding improvements.</p>
+                    </div>
+                </div>
+                <div class="stat-card efficiency tooltip-container">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">${stats.agentAdoptionRate}%</div>
+                    <div class="stat-label">🤖 Agent Mode Adoption</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">Agent Mode Adoption</div>
+                        <p>Percentage of sessions where advanced AI agent features were used.</p>
+                        <div class="tooltip-formula">Formula: (Sessions with Agent ÷ Total Sessions) × 100</div>
+                        <p><strong>Trend:</strong> Growing adoption indicates users are exploring advanced features and getting comfortable with AI assistance.</p>
+                    </div>
+                </div>
+                <div class="stat-card efficiency tooltip-container">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">${stats.contributionRatio}%</div>
+                    <div class="stat-label">📋 Contribution Efficiency</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">Contribution Efficiency</div>
+                        <p>Ratio of code added versus code deleted, indicating development efficiency.</p>
+                        <div class="tooltip-formula">Formula: (Lines Added ÷ Lines Deleted) × 100</div>
+                        <p><strong>Interpretation:</strong> >100% = net growth, ~100% = refactoring, <100% = cleanup/optimization. Healthy range: 150-300%.</p>
+                    </div>
+                </div>
+                
+                <!-- Advanced Insights - Satisfaction -->
+                <div class="stat-card insight tooltip-container">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">${stats.satisfactionProxy}</div>
+                    <div class="stat-label">😊 Developer Satisfaction Proxy</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">Developer Satisfaction Proxy</div>
+                        <p>Estimated developer satisfaction based on usage patterns and acceptance rates.</p>
+                        <div class="tooltip-formula">Formula: Acceptance Rate + Usage Consistency Score</div>
+                        <p><strong>Components:</strong> High acceptance rates + consistent usage patterns = satisfied developers. Score 0-100, where 80+ indicates high satisfaction.</p>
+                    </div>
+                </div>
             `;
         }
 
@@ -1116,6 +1377,44 @@
             const avgAcceptanceRate = totalGenerations > 0 ? Math.round((totalAcceptances / totalGenerations) * 100) : 0;
             const agentUsage = filteredData.length > 0 ? Math.round((agentUsers / filteredData.length) * 100) : 0;
 
+            // Advanced insights calculations
+            const allRegisteredUsers = getAllRegisteredUsers();
+            const activeUsers = getActiveUsers();
+            const inactiveUsers = getInactiveUsers();
+            
+            // FTE Capacity Calculation (assuming 8 hours/day, 20 days/month)
+            const avgTimeSavedPerAcceptance = 2; // minutes
+            const totalTimeSavedMinutes = totalAcceptances * avgTimeSavedPerAcceptance;
+            const totalTimeSavedHours = totalTimeSavedMinutes / 60;
+            const fteCapacity = totalTimeSavedHours / (8 * 20); // Convert to FTE months
+            
+            // Coding time savings (percentage)
+            const avgCodeLinesPerHour = 50; // assumptions for calculation
+            const estimatedSavedHours = totalLinesAdded / avgCodeLinesPerHour;
+            const codingTimeSavings = Math.round((estimatedSavedHours / (totalUsers * 8 * 20)) * 100); // percentage
+            
+            // Acceptance-Adjusted Capacity
+            const acceptanceAdjustedCapacity = (fteCapacity * avgAcceptanceRate) / 100;
+            
+            // Usage per user
+            const avgUsagePerUser = totalUsers > 0 ? Math.round(totalInteractions / totalUsers) : 0;
+            
+            // Active user ratio
+            const activeUserRatio = allRegisteredUsers.length > 0 ? 
+                Math.round((activeUsers.length / allRegisteredUsers.length) * 100) : 0;
+                
+            // Agent adoption rate
+            const agentAdoptionRate = agentUsage;
+            
+            // Developer satisfaction proxy (based on acceptance rate and usage consistency)
+            const usageConsistency = totalUsers > 0 ? Math.round((totalInteractions / totalUsers) / 10) : 0; // simplified metric
+            const satisfactionProxy = Math.min(avgAcceptanceRate + usageConsistency, 100);
+            
+            // Repository contribution (lines added vs deleted ratio)
+            const netLinesContribution = totalLinesAdded - totalLinesDeleted;
+            const contributionRatio = totalLinesDeleted > 0 ? 
+                Math.round((totalLinesAdded / totalLinesDeleted) * 100) : 100;
+
             return {
                 totalUsers,
                 totalInteractions,
@@ -1124,7 +1423,17 @@
                 avgAcceptanceRate,
                 totalLinesAdded,
                 totalLinesDeleted,
-                agentUsage
+                agentUsage,
+                // Advanced insights
+                fteCapacity: fteCapacity.toFixed(2),
+                codingTimeSavings,
+                acceptanceAdjustedCapacity: acceptanceAdjustedCapacity.toFixed(2),
+                avgUsagePerUser,
+                activeUserRatio,
+                agentAdoptionRate,
+                satisfactionProxy,
+                contributionRatio,
+                netLinesContribution: netLinesContribution.toLocaleString()
             };
         }
 
@@ -1373,7 +1682,7 @@
             charts.ideDistribution = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ides.map(ide => ide.toUpperCase()),
+                    labels: ides.map(ide => ide.toLocaleUpperCase('en-US')),
                     datasets: [{
                         data: counts,
                         backgroundColor: [
