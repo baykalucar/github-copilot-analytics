@@ -424,6 +424,7 @@
             try {
                 // Check for selected data sources in localStorage
                 const selectedUserData = localStorage.getItem('selectedUserData');
+                console.log('🔍 [inactive-users] selectedUserData from localStorage:', selectedUserData);
                 
                 let userFile = 'export-sample-users.csv';
                 
@@ -432,7 +433,9 @@
                     userFile = selectedUserData.startsWith('data/') ? selectedUserData : `./data/users/${selectedUserData}`;
                 }
                 
+                console.log('📂 [inactive-users] Loading user data from:', userFile);
                 const response = await fetch(userFile);
+                console.log('✅ [inactive-users] User data loaded successfully from:', userFile);
                 const csvText = await response.text();
                 
                 const lines = csvText.trim().split('\n');
@@ -482,6 +485,7 @@
             try {
                 // Check for selected data sources in localStorage
                 const selectedUsageData = localStorage.getItem('selectedUsageData');
+                console.log('🔍 [inactive-users] selectedUsageData from localStorage:', selectedUsageData);
                 
                 let dataFile = '7d239eb2-952c-4b35-a593-15a380bd4480_1_2a5f476ee7394f47ad7dea0e9fa8b255.json';
                 
@@ -490,7 +494,9 @@
                     dataFile = selectedUsageData.startsWith('data/') ? selectedUsageData : `./data/usage/${selectedUsageData}`;
                 }
                 
+                console.log('📂 [inactive-users] Loading usage data from:', dataFile);
                 const response = await fetch(dataFile);
+                console.log('✅ [inactive-users] Usage data loaded successfully from:', dataFile);
                 const text = await response.text();
                 
                 return text.trim().split('\n')

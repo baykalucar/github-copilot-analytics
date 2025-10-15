@@ -175,12 +175,33 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     if file_path.is_file():
                         try:
                             stat = file_path.stat()
+                            
+                            # Format file size
+                            size_bytes = stat.st_size
+                            if size_bytes == 0:
+                                size_str = '0 Bytes'
+                            else:
+                                k = 1024
+                                sizes = ['Bytes', 'KB', 'MB', 'GB']
+                                i = 0
+                                size = size_bytes
+                                while size >= k and i < len(sizes) - 1:
+                                    size = size / k
+                                    i += 1
+                                size_str = f"{size:.2f} {sizes[i]}"
+                            
+                            # Get file creation/modification time
+                            from datetime import datetime
+                            mtime = datetime.fromtimestamp(stat.st_mtime)
+                            created_date = mtime.strftime('%Y-%m-%d %H:%M')
+                            
                             files.append({
                                 'name': file_path.name,
-                                'size': stat.st_size,
+                                'size': size_str,
                                 'type': self.guess_type(str(file_path))[0] or 'application/octet-stream',
                                 'path': str(file_path).replace('\\', '/'),
-                                'uploaded': True
+                                'uploaded': True,
+                                'createdDate': created_date
                             })
                         except Exception as e:
                             print(f"⚠️  Error reading file {file_path}: {e}")

@@ -411,14 +411,17 @@
                 // Data-manager'dan seçilen dosyayı öncelikle kontrol et
                 const selectedUserData = localStorage.getItem('selectedUserData');
                 const dataSource = localStorage.getItem('dataSource') || 'data/users/';
+                console.log('🔍 [active-users] Loading user data from:', selectedUserData || `${dataSource}export-sample-users.csv`);
                 let response;
                 
                 try {
                     // Önce seçilen dosyayı dene
                     if (selectedUserData) {
                         response = await fetch(selectedUserData);
+                        console.log('✅ [active-users] User data loaded from selected file:', selectedUserData);
                     } else {
                         response = await fetch(`${dataSource}export-sample-users.csv`);
+                        console.log('⚠️ [active-users] No selected file, using default:', `${dataSource}export-sample-users.csv`);
                     }
                 } catch (error) {
                     try {
@@ -660,14 +663,17 @@
                 // Data-manager'dan seçilen dosyayı öncelikle kontrol et
                 const selectedUsageData = localStorage.getItem('selectedUsageData');
                 const dataSource = localStorage.getItem('dataSource') || 'data/usage/';
+                console.log('🔍 [active-users] Loading usage data from:', selectedUsageData || `${dataSource}7d239eb2-952c-4b35-a593-15a380bd4480_1_2a5f476ee7394f47ad7dea0e9fa8b255.json`);
                 let response;
                 
                 try {
                     // Önce seçilen dosyayı dene
                     if (selectedUsageData) {
                         response = await fetch(selectedUsageData);
+                        console.log('✅ [active-users] Usage data loaded from selected file:', selectedUsageData);
                     } else {
                         response = await fetch(`${dataSource}7d239eb2-952c-4b35-a593-15a380bd4480_1_2a5f476ee7394f47ad7dea0e9fa8b255.json`);
+                        console.log('⚠️ [active-users] No selected file, using default');
                     }
                 } catch (error) {
                     response = await fetch(`7d239eb2-952c-4b35-a593-15a380bd4480_1_2a5f476ee7394f47ad7dea0e9fa8b255.json`);

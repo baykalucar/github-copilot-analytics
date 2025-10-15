@@ -941,6 +941,7 @@
         async function loadUserMapping() {
             try {
                 const selectedUserData = localStorage.getItem('selectedUserData');
+                console.log('🔍 [raw-data-viewer] selectedUserData from localStorage:', selectedUserData);
                 let userDataPath = selectedUserData || 'data/users/export-sample-users.csv';
                 
                 // Eğer path data/ ile başlamıyorsa ekle
@@ -948,7 +949,9 @@
                     userDataPath = `data/users/${userDataPath}`;
                 }
                 
+                console.log('📂 [raw-data-viewer] Loading user data from:', userDataPath);
                 const response = await fetch(userDataPath);
+                console.log('✅ [raw-data-viewer] User data loaded successfully from:', userDataPath);
                 const csvText = await response.text();
                 
                 // CSV parse et
@@ -988,6 +991,7 @@
                 
                 // Check for selected data sources in localStorage
                 const selectedUsageData = localStorage.getItem('selectedUsageData');
+                console.log('🔍 [raw-data-viewer] selectedUsageData from localStorage:', selectedUsageData);
                 
                 let dataFile = './data/usage/7d239eb2-952c-4b35-a593-15a380bd4480_1_2a5f476ee7394f47ad7dea0e9fa8b255.json';
                 
@@ -996,7 +1000,9 @@
                     dataFile = selectedUsageData.startsWith('data/') ? selectedUsageData : `./data/usage/${selectedUsageData}`;
                 }
                 
+                console.log('📂 [raw-data-viewer] Loading usage data from:', dataFile);
                 const response = await fetch(dataFile);
+                console.log('✅ [raw-data-viewer] Usage data loaded successfully from:', dataFile);
                 const text = await response.text();
                 
                 // Parse JSONL format
