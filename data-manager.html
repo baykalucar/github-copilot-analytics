@@ -457,26 +457,29 @@
                     <span>ℹ️</span>
                     Data Source Instructions
                 </h2>
-                
+                <div style="margin-bottom:20px;">
+                    <label for="enterpriseName" style="font-weight:bold;color:#2c3e50;">Your Enterprise Name:</label>
+                    <input type="text" id="enterpriseName" placeholder="Enter enterprise name..." style="width:100%;margin-top:8px;padding:10px;border-radius:6px;border:1px solid #e9ecef;font-size:1rem;">
+                    <div id="enterpriseLinks" style="margin-top:15px;"></div>
+                </div>
                 <div class="info-grid">
                     <div class="info-item">
                         <div class="info-icon">📊</div>
                         <div class="info-content">
                             <h3>Usage Data</h3>
                             <p>You can obtain GitHub Copilot usage data from your enterprise insights page:</p>
-                            <div class="source-url">
+                            <div class="source-url" id="usageLinkBox">
                                 <code>https://github.com/enterprises/{your-enterprise-name}/insights/copilot</code>
                             </div>
                             <p class="source-note">Navigate to this page and export the usage data as JSON or JSONL format.</p>
                         </div>
                     </div>
-                    
                     <div class="info-item">
                         <div class="info-icon">👥</div>
                         <div class="info-content">
                             <h3>User Data</h3>
                             <p>You can export user data from your enterprise people management page:</p>
-                            <div class="source-url">
+                            <div class="source-url" id="userLinkBox">
                                 <code>https://github.com/enterprises/{your-enterprise-name}/people</code>
                             </div>
                             <p class="source-note">Go to this page and export the user list as CSV format.</p>
@@ -584,6 +587,39 @@
             usage: [],
             users: []
         };
+
+        // Enterprise name textbox dinamik linkler ve localStorage entegrasyonu
+        document.addEventListener('DOMContentLoaded', function() {
+            const enterpriseInput = document.getElementById('enterpriseName');
+            const usageLinkBox = document.getElementById('usageLinkBox');
+            const userLinkBox = document.getElementById('userLinkBox');
+            const enterpriseLinks = document.getElementById('enterpriseLinks');
+
+            // LocalStorage'dan daha önce girilmiş enterprise adı varsa otomatik doldur
+            const savedEnterprise = localStorage.getItem('enterpriseName');
+            if (savedEnterprise) {
+                enterpriseInput.value = savedEnterprise;
+            }
+
+            function updateLinks() {
+                const name = enterpriseInput.value.trim();
+                // Her değişiklikte localStorage'a kaydet
+                localStorage.setItem('enterpriseName', name);
+                if (name) {
+                    const usageUrl = `https://github.com/enterprises/${name}/insights/copilot`;
+                    const userUrl = `https://github.com/enterprises/${name}/people`;
+                    usageLinkBox.innerHTML = `<a href='${usageUrl}' target='_blank' style='color:#007acc;text-decoration:underline;'>${usageUrl}</a>`;
+                    userLinkBox.innerHTML = `<a href='${userUrl}' target='_blank' style='color:#28a745;text-decoration:underline;'>${userUrl}</a>`;
+                    enterpriseLinks.innerHTML = `<div style='margin-top:8px;'><a href='${usageUrl}' target='_blank' style='color:#007acc;text-decoration:underline;margin-right:15px;'>Usage Data Link</a><a href='${userUrl}' target='_blank' style='color:#28a745;text-decoration:underline;'>User Data Link</a></div>`;
+                } else {
+                    usageLinkBox.innerHTML = `<code>https://github.com/enterprises/{your-enterprise-name}/insights/copilot</code>`;
+                    userLinkBox.innerHTML = `<code>https://github.com/enterprises/{your-enterprise-name}/people</code>`;
+                    enterpriseLinks.innerHTML = '';
+                }
+            }
+            enterpriseInput.addEventListener('input', updateLinks);
+            updateLinks();
+        });
 
         let selectedFiles = {
             usage: null,

@@ -1222,6 +1222,14 @@
             const stats = calculateStats();
             const statsGrid = document.getElementById('statsGrid');
             
+            // Cost metrics
+            const monthlyCost = stats.totalUsers * 19;
+            const yearlyCost = monthlyCost * 12;
+            // FTE Savings: Extra FTE x $5000
+            const extraFTE = parseFloat(stats.fteCapacity) || 0;
+            const fteSavings = Math.round(extraFTE * 5000);
+            const roi = monthlyCost > 0 ? Math.round(((fteSavings - monthlyCost) / monthlyCost) * 100) : 0;
+
             statsGrid.innerHTML = `
                 <!-- Basic Metrics -->
                 <div class="stat-card">
@@ -1256,7 +1264,53 @@
                     <div class="stat-number">${stats.agentUsage}%</div>
                     <div class="stat-label">Agent Usage</div>
                 </div>
-                
+
+                <!-- Cost Metrics -->
+                <div class="stat-card tooltip-container" style="background:linear-gradient(135deg,#1e293b 0%,#007acc 100%);border:2px solid #007acc;color:#007acc;">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">$${monthlyCost.toLocaleString()}</div>
+                    <div class="stat-label">Monthly Cost</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">Monthly Cost</div>
+                        <p>Estimated monthly Copilot license cost.</p>
+                        <div class="tooltip-formula">Formula: Total Users × $19</div>
+                        <p><strong>Assumption:</strong> Each active user requires a Copilot license at $19/month.</p>
+                    </div>
+                </div>
+                <div class="stat-card tooltip-container" style="background:linear-gradient(135deg,#1e293b 0%,#28a745 100%);border:2px solid #28a745;color:#28a745;">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">$${yearlyCost.toLocaleString()}</div>
+                    <div class="stat-label">Yearly Cost</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">Yearly Cost</div>
+                        <p>Estimated yearly Copilot license cost.</p>
+                        <div class="tooltip-formula">Formula: Monthly Cost × 12</div>
+                        <p><strong>Assumption:</strong> 12 months per year.</p>
+                    </div>
+                </div>
+                <div class="stat-card tooltip-container" style="background:linear-gradient(135deg,#1e293b 0%,#ffb300 100%);border:2px solid #ffb300;color:#ffb300;">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">$${fteSavings.toLocaleString()} / mo</div>
+                    <div class="stat-label">Estimated FTE Savings</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">Estimated FTE Savings</div>
+                        <p>Estimated monthly savings based on extra FTE capacity.</p>
+                        <div class="tooltip-formula">Formula: Extra FTE × $5,000</div>
+                        <p><strong>Assumption:</strong> Each extra FTE is valued at $5,000/month.</p>
+                    </div>
+                </div>
+                <div class="stat-card tooltip-container" style="background:linear-gradient(135deg,#1e293b 0%,#e74c3c 100%);border:2px solid #e74c3c;color:#e74c3c;">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">${roi}%</div>
+                    <div class="stat-label">ROI</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">ROI</div>
+                        <p>Return on Investment: estimated monthly savings vs. cost.</p>
+                        <div class="tooltip-formula">Formula: ((FTE Savings - Monthly Cost) / Monthly Cost) × 100</div>
+                        <p><strong>Purpose:</strong> Shows the financial efficiency of Copilot usage.</p>
+                    </div>
+                </div>
+
                 <!-- Advanced Insights - Productivity -->
                 <div class="stat-card productivity tooltip-container">
                     <div class="help-icon">?</div>
