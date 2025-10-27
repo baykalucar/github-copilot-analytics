@@ -1382,13 +1382,24 @@
                 </div>
                 <div class="stat-card efficiency tooltip-container">
                     <div class="help-icon">?</div>
-                    <div class="stat-number">${stats.agentAdoptionRate}%</div>
-                    <div class="stat-label">🤖 Agent Mode Adoption</div>
+                    <div class="stat-number">${stats.basicAgentAdoptionRate}%</div>
+                    <div class="stat-label">🤖 Basic Agent Adoption</div>
                     <div class="tooltip">
-                        <div class="tooltip-title">Agent Mode Adoption</div>
-                        <p>Percentage of sessions where advanced AI agent features were used.</p>
+                        <div class="tooltip-title">Basic Agent Adoption</div>
+                        <p>Percentage of sessions where AI agent features were used at least once.</p>
                         <div class="tooltip-formula">Formula: (Sessions with Agent ÷ Total Sessions) × 100</div>
-                        <p><strong>Trend:</strong> Growing adoption indicates users are exploring advanced features and getting comfortable with AI assistance.</p>
+                        <p><strong>Trend:</strong> Shows initial adoption of advanced AI features.</p>
+                    </div>
+                </div>
+                <div class="stat-card efficiency tooltip-container">
+                    <div class="help-icon">?</div>
+                    <div class="stat-number">${stats.advancedAgentAdoptionRate}%</div>
+                    <div class="stat-label">🚀 Advanced Agent Adoption</div>
+                    <div class="tooltip">
+                        <div class="tooltip-title">Advanced Agent Adoption (3+ Days)</div>
+                        <p>Percentage of users who used AI agent features on more than 3 different days.</p>
+                        <div class="tooltip-formula">Formula: (Users with 3+ Agent Days ÷ Total Users) × 100</div>
+                        <p><strong>Target:</strong> Higher values indicate sustained engagement with advanced AI features. This is a key indicator of power user adoption.</p>
                     </div>
                 </div>
                 <div class="stat-card efficiency tooltip-container">
@@ -1457,8 +1468,21 @@
             const activeUserRatio = allRegisteredUsers.length > 0 ? 
                 Math.round((activeUsers.length / allRegisteredUsers.length) * 100) : 0;
                 
-            // Agent adoption rate
-            const agentAdoptionRate = agentUsage;
+            // Agent adoption rate (basic - users who used agent at least once)
+            const basicAgentAdoptionRate = agentUsage;
+            
+            // Advanced Agent adoption rate (users who used agent 3+ days)
+            const agentUserDays = filteredData.reduce((acc, d) => {
+                if (d.used_agent) {
+                    const user = d.user_login;
+                    if (!acc[user]) acc[user] = 0;
+                    acc[user]++;
+                }
+                return acc;
+            }, {});
+            const agentUsersWithThreePlusDays = Object.values(agentUserDays).filter(days => days > 3).length;
+            const advancedAgentAdoptionRate = totalUsers > 0 ? 
+                Math.round((agentUsersWithThreePlusDays / totalUsers) * 100) : 0;
             
             // Developer satisfaction proxy (based on acceptance rate and usage consistency)
             const usageConsistency = totalUsers > 0 ? Math.round((totalInteractions / totalUsers) / 10) : 0; // simplified metric
@@ -1484,7 +1508,8 @@
                 acceptanceAdjustedCapacity: acceptanceAdjustedCapacity.toFixed(2),
                 avgUsagePerUser,
                 activeUserRatio,
-                agentAdoptionRate,
+                basicAgentAdoptionRate,
+                advancedAgentAdoptionRate,
                 satisfactionProxy,
                 contributionRatio,
                 netLinesContribution: netLinesContribution.toLocaleString()
